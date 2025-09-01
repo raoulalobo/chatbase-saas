@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChatBase SaaS - Plateforme d'Agents IA
 
-## Getting Started
+## 📋 Description
 
-First, run the development server:
+SaaS moderne pour créer des agents de service client IA intelligents pour sites web. Cette plateforme permet aux entreprises de déployer rapidement des chatbots personnalisés sans compétences techniques.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Fonctionnalités Principales
+
+- ✅ **Création rapide d'agents IA** - Interface intuitive pour configurer votre agent en minutes
+- ✅ **IA avancée** - Powered by GPT-4 pour des réponses naturelles et pertinentes
+- ✅ **Personnalisation complète** - Adaptez l'apparence et le comportement selon vos besoins
+- ✅ **Dashboard analytics** - Suivez les performances et conversations de vos agents
+- ✅ **Intégration facile** - Script embed simple pour n'importe quel site web
+
+## 🛠️ Stack Technique
+
+- **Frontend**: Next.js 15.5 (App Router) + TypeScript
+- **Styling**: Tailwind CSS 4.0 + Variables CSS personnalisées
+- **UI Components**: Radix UI + Components personnalisés
+- **Base de données**: Drizzle ORM + PostgreSQL
+- **Authentification**: NextAuth.js
+- **Icons**: Lucide React
+
+## 📁 Structure du Projet
+
+```
+src/
+├── app/                    # App Router Next.js 15
+│   ├── page.tsx           # Page d'accueil
+│   ├── globals.css        # Styles globaux avec variables CSS
+│   └── layout.tsx         # Layout principal
+├── components/
+│   ├── ui/                # Composants UI réutilisables
+│   ├── dashboard/         # Composants du tableau de bord
+│   └── agents/           # Composants liés aux agents IA
+├── lib/
+│   ├── utils.ts          # Utilitaires (cn pour classes CSS)
+│   └── db/               # Configuration base de données
+│       ├── index.ts      # Connexion Drizzle
+│       ├── schema.ts     # Schéma des tables
+│       └── queries.ts    # Fonctions CRUD typées
+├── types/                # Types TypeScript
+├── hooks/                # Hooks React personnalisés
+└── store/               # État global de l'application
+drizzle/                 # Fichiers de migrations Drizzle
+drizzle.config.ts        # Configuration Drizzle Kit
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ⚡ Démarrage Rapide
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Installation des dépendances**
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Configuration de l'environnement**
+```bash
+cp .env.example .env
+# Remplir les variables d'environnement
+```
 
-## Learn More
+3. **Initialisation de la base de données**
+```bash
+# Générer les migrations depuis le schéma
+npm run db:generate
 
-To learn more about Next.js, take a look at the following resources:
+# Appliquer les migrations à la base de données
+npm run db:migrate
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Ou pousser directement le schéma (développement)
+npm run db:push
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Lancement du serveur de développement**
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+L'application sera accessible sur [http://localhost:3000](http://localhost:3000)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎨 Système de Design
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Palette de Couleurs
+- **Primary**: Bleu (#3b82f6)
+- **Success**: Vert (#22c55e)  
+- **Warning**: Orange (#f59e0b)
+- **Error**: Rouge (#ef4444)
+
+### Thème Sombre/Clair
+Support automatique basé sur les préférences système avec variables CSS personnalisées.
+
+## 📦 Scripts Disponibles
+
+```bash
+npm run dev          # Serveur de développement (Turbopack)
+npm run build        # Build de production
+npm run start        # Serveur de production  
+npm run lint         # Linting ESLint
+
+# Scripts de base de données
+npm run db:generate  # Générer les migrations Drizzle
+npm run db:migrate   # Appliquer les migrations
+npm run db:push      # Pousser le schéma directement
+npm run db:studio    # Interface graphique Drizzle Studio
+```
+
+## 🔄 Prochaines Étapes
+
+- [ ] Configuration de l'authentification NextAuth.js
+- [ ] Interface de création d'agents IA
+- [ ] Dashboard d'analytics
+- [ ] API routes pour la gestion des agents
+- [ ] Système de paiement (Stripe)
+- [ ] Widget embeddable pour sites clients
+
+## 🤝 Contribution
+
+1. Fork du projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit des changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.

@@ -1,4 +1,6 @@
-import { HeaderNav } from "@/components/layout/HeaderNav"
+"use client"
+
+import { StickyNav } from "@/components/homepage/StickyNav"
 import { HeroSection } from "@/components/homepage/HeroSection"
 import { FeaturesSection } from "@/components/homepage/FeaturesSection"
 import { HowItWorksSection } from "@/components/homepage/HowItWorksSection"
@@ -7,19 +9,18 @@ import { CTASection } from "@/components/homepage/CTASection"
 
 /**
  * Page d'accueil principale avec design moderne 2025
- * - Header horizontal sticky avec glassmorphism
- * - Navigation + Login/Register intégrés
+ * - Navigation sticky avec glassmorphism
  * - Sections animées au scroll
  * - Design vert cohérent avec effets blur
  * - Présentation détaillée du produit Agent IA
- * - Menu responsive avec hamburger mobile
  * - Optimisé pour les performances et l'accessibilité
  */
+
 export default function HomePage() {
   return (
     <main className="relative">
-      {/* Header de navigation horizontal */}
-      <HeaderNav />
+      {/* Navigation sticky */}
+      <StickyNav />
       
       {/* Sections de la homepage */}
       <HeroSection />
