@@ -106,7 +106,7 @@ export function HeaderNav() {
   useEffect(() => {
     const observerOptions = {
       root: null,
-      rootMargin: "-40% 0px -40% 0px",
+      rootMargin: "-20% 0px -20% 0px",
       threshold: 0,
     }
 

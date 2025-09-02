@@ -235,6 +235,7 @@ export function FeaturesSection() {
           </motion.button>
         </motion.div>
       </div>
+
     </section>
   )
 }

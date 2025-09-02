@@ -28,7 +28,7 @@ export const agents = pgTable("agents", {
   temperature: text("temperature").default("0.7").notNull(), // 0.0 à 1.0
   maxTokens: text("max_tokens").default("4096").notNull(), // 1 à 8192
   topP: text("top_p").default("1.0").notNull(), // 0.0 à 1.0
-  model: text("model").default("claude-3-5-sonnet-20241204").notNull(),
+  model: text("model").default("claude-3-5-haiku-20241022").notNull(), // Claude Haiku par défaut pour optimiser les coûts
   
   // État et fichiers
   isActive: boolean("is_active").default(true).notNull(),

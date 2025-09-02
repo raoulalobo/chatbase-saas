@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { AppLayout } from "@/components/layout/AppLayout"
-import { useFileUpload } from "@/hooks/use-file-upload"
+import { useFileUpload, useFileDrop } from "@/hooks/use-file-upload"
 import { FileItem } from "@/components/files/FileItem"
 import { FileSizeFormatter } from "@/components/files/FileSizeFormatter"
 import { FileTypeIcon } from "@/components/files/FileTypeIcon"
@@ -62,7 +62,6 @@ export default function AgentFilesPage() {
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([])
   const [agentFiles, setAgentFiles] = React.useState<any[]>([])
   const [isLoadingFiles, setIsLoadingFiles] = React.useState(false)
-  const [isDragActive, setIsDragActive] = React.useState(false)
 
   // Charger les données de l'agent au montage
   React.useEffect(() => {
@@ -171,29 +170,12 @@ export default function AgentFilesPage() {
     }
   }, [fileUpload])
 
-  // Gérer le drag & drop
-  const handleDragOver = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragActive(true)
-  }, [])
+  // Configuration du hook de drag & drop
+  const fileDrop = useFileDrop({
+    onFileDrop: handleFilesSelected,
+    multiple: true
+  })
 
-  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragActive(false)
-  }, [])
-
-  const handleDrop = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragActive(false)
-
-    const files = e.dataTransfer.files
-    if (files.length > 0) {
-      handleFilesSelected(files)
-    }
-  }, [handleFilesSelected])
 
   // Ouvrir le sélecteur de fichiers
   const openFileSelector = React.useCallback(() => {
@@ -286,13 +268,11 @@ export default function AgentFilesPage() {
           <CardContent>
             {/* Zone de drag & drop */}
             <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+              {...fileDrop.dragProps}
               onClick={openFileSelector}
               className={`
                 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                ${isDragActive 
+                ${fileDrop.isDragging 
                   ? 'border-primary bg-primary/5' 
                   : 'border-slate-300 hover:border-primary/50 hover:bg-slate-50'
                 }
@@ -301,7 +281,7 @@ export default function AgentFilesPage() {
               <Upload className="w-12 h-12 mx-auto text-slate-400 mb-4" />
               <div>
                 <p className="text-lg font-medium text-slate-900 mb-2">
-                  {isDragActive ? 'Relâchez pour uploader' : 'Glissez vos fichiers ici'}
+                  {fileDrop.isDragging ? 'Relâchez pour uploader' : 'Glissez vos fichiers ici'}
                 </p>
                 <p className="text-slate-600 mb-4">
                   ou <span className="text-primary font-medium">cliquez pour parcourir</span>

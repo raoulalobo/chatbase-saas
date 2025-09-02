@@ -86,6 +86,9 @@ export function DemoSection() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [typingMessage, setTypingMessage] = useState("")
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
+  const [typingUserMessage, setTypingUserMessage] = useState("")
+  const [isUserTyping, setIsUserTyping] = useState(false)
+  const [showCursor, setShowCursor] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const ref = useRef<HTMLElement>(null)
   const isInView = useInView(ref, { once: true, margin: "-100px" })
@@ -96,16 +99,20 @@ export function DemoSection() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, typingMessage])
+  }, [messages, typingMessage, typingUserMessage])
 
   const startDemo = () => {
     setIsPlaying(true)
     setMessages([])
     setCurrentMessageIndex(0)
+    setTypingUserMessage("")
+    setIsUserTyping(false)
+    setShowCursor(false)
+    setTypingMessage("")
     playNextMessage(0)
   }
 
-  const playNextMessage = (index: number) => {
+  const playNextMessage = async (index: number) => {
     if (index >= demoConversation.length) {
       setIsPlaying(false)
       return
@@ -114,22 +121,63 @@ export function DemoSection() {
     const message = demoConversation[index]
     const delay = message.delay || 0
 
-    setTimeout(() => {
-      if (message.type === "bot") {
-        // Animation de typing pour les messages bot
-        setTypingMessage("Agent IA est en train d'écrire...")
-        setTimeout(() => {
-          setMessages(prev => [...prev, message])
-          setTypingMessage("")
-          setCurrentMessageIndex(index + 1)
-          playNextMessage(index + 1)
-        }, 1500)
-      } else {
-        setMessages(prev => [...prev, message])
-        setCurrentMessageIndex(index + 1)
-        playNextMessage(index + 1)
+    // Attendre le délai initial
+    await new Promise(resolve => setTimeout(resolve, delay))
+
+    if (message.type === "bot") {
+      // Animation de typing pour les messages bot
+      setTypingMessage("Agent IA est en train d'écrire...")
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      setMessages(prev => [...prev, message])
+      setTypingMessage("")
+      setCurrentMessageIndex(index + 1)
+      playNextMessage(index + 1)
+    } else {
+      // Pour les messages utilisateur : simuler la saisie
+      await simulateUserTyping(message.message)
+      
+      setMessages(prev => [...prev, message])
+      setCurrentMessageIndex(index + 1)
+      playNextMessage(index + 1)
+    }
+  }
+
+  // Fonction pour simuler la saisie utilisateur avec effet typewriter
+  const simulateUserTyping = async (text: string) => {
+    setIsUserTyping(true)
+    setShowCursor(true)
+    setTypingUserMessage("")
+
+    // Vitesses de frappe variables pour plus de réalisme
+    const getTypingSpeed = () => Math.random() * 70 + 80 // 80-150ms
+
+    for (let i = 0; i <= text.length; i++) {
+      const currentText = text.substring(0, i)
+      setTypingUserMessage(currentText)
+      
+      if (i < text.length) {
+        const char = text[i]
+        let delay = getTypingSpeed()
+        
+        // Pauses plus longues après la ponctuation
+        if (char === ',' || char === ';') delay += 200
+        if (char === '.' || char === '!' || char === '?') delay += 500
+        if (char === ' ') delay += 50 // Légère pause après les espaces
+        
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
-    }, delay)
+    }
+
+    // Pause finale avant "envoi"
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
+    setShowCursor(false)
+    setIsUserTyping(false)
+    
+    // Petit délai pour simuler le clic sur le bouton d'envoi
+    await new Promise(resolve => setTimeout(resolve, 300))
+    setTypingUserMessage("")
   }
 
   return (
@@ -284,14 +332,29 @@ export function DemoSection() {
 
                   {/* Input */}
                   <div className="p-4 border-t border-gray-200 bg-white">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <input
-                        type="text"
-                        placeholder="Tapez votre message..."
-                        className="flex-1 bg-transparent outline-none text-slate-800 placeholder-slate-500"
-                        disabled
-                      />
-                      <button className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                    <div className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                      isUserTyping ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+                    }`}>
+                      <div className="flex-1 relative">
+                        <span className="text-slate-800">
+                          {typingUserMessage}
+                          {/* Curseur clignotant à la fin du texte */}
+                          {showCursor && (
+                            <span className="text-slate-800 ml-0.5 animate-pulse" style={{ animationDuration: '1s' }}>|</span>
+                          )}
+                        </span>
+                        {/* Placeholder quand pas de texte */}
+                        {!typingUserMessage && !isUserTyping && (
+                          <span className="text-slate-500">Tapez votre message...</span>
+                        )}
+                      </div>
+                      <button 
+                        className={`p-2 rounded-lg transition-all duration-300 ${
+                          isUserTyping 
+                            ? 'bg-blue-500 text-white shadow-lg scale-110' 
+                            : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        }`}
+                      >
                         <Send className="w-4 h-4" />
                       </button>
                     </div>

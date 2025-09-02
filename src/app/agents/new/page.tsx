@@ -23,10 +23,10 @@ import { CreateAgentSchema, type CreateAgent } from "@/lib/schemas/agent"
  * - Navigation automatique après création
  */
 
-// Modèles disponibles pour les agents
+// Modèles disponibles pour les agents (Claude Haiku en premier par défaut)
 const AVAILABLE_MODELS = [
-  { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
   { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
+  { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
   { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
   { value: "gpt-4o", label: "GPT-4o" },
   { value: "gpt-4o-mini", label: "GPT-4o Mini" },
@@ -46,7 +46,7 @@ export default function NewAgentPage() {
       temperature: "0.7",
       maxTokens: "4000",
       topP: "0.9",
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-5-haiku-20241022",
       isActive: true,
     },
   })

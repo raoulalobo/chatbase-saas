@@ -24,10 +24,10 @@ import { UpdateAgentSchema, type UpdateAgent } from "@/lib/schemas/agent"
  * - Navigation vers la liste après sauvegarde
  */
 
-// Modèles disponibles pour les agents
+// Modèles disponibles pour les agents (Claude Haiku en premier par défaut)
 const AVAILABLE_MODELS = [
-  { value: "claude-3-5-sonnet-20241204", label: "Claude 3.5 Sonnet (Latest)" },
   { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
+  { value: "claude-3-5-sonnet-20241204", label: "Claude 3.5 Sonnet (Latest)" },
   { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
   { value: "gpt-4o", label: "GPT-4o" },
   { value: "gpt-4o-mini", label: "GPT-4o Mini" },
@@ -57,7 +57,7 @@ export default function EditAgentPage() {
       temperature: "0.7",
       maxTokens: "4000",
       topP: "0.9",
-      model: "claude-3-5-sonnet-20241204",
+      model: "claude-3-5-haiku-20241022",
       isActive: true,
       restrictToDocuments: true,
     },
