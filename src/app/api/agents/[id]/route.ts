@@ -24,7 +24,7 @@ import {
 // GET /api/agents/[id] - Récupérer un agent spécifique
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Vérification de l'authentification
@@ -33,8 +33,10 @@ export async function GET(
       return ApiErrorHandler.unauthorized()
     }
 
+    const resolvedParams = await params
+    
     // Validation de l'ID
-    const paramsResult = AgentParamsSchema.safeParse({ id: params.id })
+    const paramsResult = AgentParamsSchema.safeParse({ id: resolvedParams.id })
     if (!paramsResult.success) {
       return ApiErrorHandler.handleError(paramsResult.error)
     }
@@ -79,7 +81,7 @@ export async function GET(
 // PUT /api/agents/[id] - Mettre à jour un agent
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Vérification de l'authentification
@@ -88,8 +90,10 @@ export async function PUT(
       return ApiErrorHandler.unauthorized()
     }
 
+    const resolvedParams = await params
+
     // Validation de l'ID
-    const paramsResult = AgentParamsSchema.safeParse({ id: params.id })
+    const paramsResult = AgentParamsSchema.safeParse({ id: resolvedParams.id })
     if (!paramsResult.success) {
       return ApiErrorHandler.handleError(paramsResult.error)
     }
@@ -180,7 +184,7 @@ export async function PUT(
 // DELETE /api/agents/[id] - Supprimer un agent
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Vérification de l'authentification
@@ -189,8 +193,10 @@ export async function DELETE(
       return ApiErrorHandler.unauthorized()
     }
 
+    const resolvedParams = await params
+
     // Validation de l'ID
-    const paramsResult = AgentParamsSchema.safeParse({ id: params.id })
+    const paramsResult = AgentParamsSchema.safeParse({ id: resolvedParams.id })
     if (!paramsResult.success) {
       return ApiErrorHandler.handleError(paramsResult.error)
     }

@@ -28,10 +28,11 @@ export const agents = pgTable("agents", {
   temperature: text("temperature").default("0.7").notNull(), // 0.0 à 1.0
   maxTokens: text("max_tokens").default("4096").notNull(), // 1 à 8192
   topP: text("top_p").default("1.0").notNull(), // 0.0 à 1.0
-  model: text("model").default("claude-3-5-sonnet-20241022").notNull(),
+  model: text("model").default("claude-3-5-sonnet-20241204").notNull(),
   
   // État et fichiers
   isActive: boolean("is_active").default(true).notNull(),
+  restrictToDocuments: boolean("restrict_to_documents").default(true).notNull(), // Force l'agent à utiliser uniquement les documents fournis
   anthropicFileIds: text("anthropic_file_ids").array(), // Array des IDs fichiers Anthropic
   
   createdAt: timestamp("created_at").defaultNow().notNull(),

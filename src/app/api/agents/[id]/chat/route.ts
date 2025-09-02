@@ -89,7 +89,8 @@ export async function POST(
       temperature: agent.temperature,
       maxTokens: agent.maxTokens,
       topP: agent.topP,
-      fileIds: agent.files.map(f => f.anthropicFileId).filter(Boolean) // Filtrer les IDs vides
+      fileIds: agent.files.map(f => f.anthropicFileId).filter(Boolean), // Filtrer les IDs vides
+      restrictToDocuments: agent.restrictToDocuments // Force l'agent à utiliser uniquement les documents fournis
     }
 
     // Appeler l'API Anthropic pour générer une réponse

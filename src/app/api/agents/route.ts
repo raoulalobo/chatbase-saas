@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
         topP: agentData.topP,
         model: agentData.model,
         isActive: agentData.isActive,
+        restrictToDocuments: agentData.restrictToDocuments,
         createdAt: now,
         updatedAt: now,
       })

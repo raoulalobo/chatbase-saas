@@ -65,6 +65,7 @@ export const AgentBaseSchema = z.object({
     ),
   
   isActive: z.boolean().default(true),
+  restrictToDocuments: z.boolean().default(true), // Force l'agent à utiliser uniquement les documents fournis
 })
 
 // Schéma pour la création d'un agent
@@ -163,6 +164,7 @@ export const AgentResponseSchema = z.object({
   topP: z.string(),
   model: z.string(),
   isActive: z.boolean(),
+  restrictToDocuments: z.boolean(),
   userId: z.string(),
   createdAt: z.string(), // ISO date string
   updatedAt: z.string(), // ISO date string

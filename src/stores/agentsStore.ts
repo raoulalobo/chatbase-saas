@@ -163,12 +163,15 @@ export const useAgentsStore = create<AgentsState>()(
       // Récupérer un agent spécifique
       fetchAgent: async (id: string) => {
         set({ isLoading: true, error: null })
+        console.log('fetchAgent called with id:', id)
 
         const { data, error } = await apiRequest<AgentResponse>(
           `/api/agents/${id}`
         )
+        console.log('fetchAgent response:', { data, error })
 
         if (error) {
+          console.log('fetchAgent error:', error)
           set({ 
             isLoading: false, 
             error: { message: error } 
@@ -177,6 +180,7 @@ export const useAgentsStore = create<AgentsState>()(
         }
 
         if (data) {
+          console.log('fetchAgent success, setting selectedAgent:', data)
           // Mettre à jour l'agent dans la liste si il existe
           const { agents } = get()
           const updatedAgents = agents.map(agent => 

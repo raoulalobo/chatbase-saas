@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, Bot, Save, AlertCircle, Loader2 } from "lucide-react"
+import { ArrowLeft, Bot, Save, AlertCircle, Loader2, FileText, Upload } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,7 @@ import { UpdateAgentSchema, type UpdateAgent } from "@/lib/schemas/agent"
 
 // Modèles disponibles pour les agents
 const AVAILABLE_MODELS = [
-  { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
+  { value: "claude-3-5-sonnet-20241204", label: "Claude 3.5 Sonnet (Latest)" },
   { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
   { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
   { value: "gpt-4o", label: "GPT-4o" },
@@ -57,8 +57,9 @@ export default function EditAgentPage() {
       temperature: "0.7",
       maxTokens: "4000",
       topP: "0.9",
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-5-sonnet-20241204",
       isActive: true,
+      restrictToDocuments: true,
     },
   })
 
@@ -81,6 +82,7 @@ export default function EditAgentPage() {
         topP: selectedAgent.topP.toString(),
         model: selectedAgent.model,
         isActive: selectedAgent.isActive,
+        restrictToDocuments: selectedAgent.restrictToDocuments,
       })
     }
   }, [selectedAgent, agentId, form])
@@ -338,6 +340,67 @@ export default function EditAgentPage() {
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Section dédiée aux restrictions */}
+                <div className="col-span-full">
+                  <div className="border-t pt-4 mt-4">
+                    <h3 className="text-base font-medium text-slate-900 mb-3">Comportement de l'agent</h3>
+                    
+                    {/* Restriction aux documents */}
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        id="restrictToDocuments"
+                        checked={form.watch("restrictToDocuments")}
+                        onChange={(e) => form.setValue("restrictToDocuments", e.target.checked)}
+                        className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="restrictToDocuments" className="text-sm font-medium text-slate-900 cursor-pointer">
+                          Restreindre aux documents fournis
+                        </Label>
+                        <p className="text-xs text-slate-600 mt-1">
+                          L'agent utilisera uniquement les informations contenues dans les documents uploadés et ignorera ses connaissances préexistantes. 
+                          Si l'information n'est pas dans les documents, l'agent le mentionnera explicitement.
+                        </p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          💡 Recommandé pour garantir que les réponses proviennent exclusivement de vos sources
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Gestion des fichiers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Fichiers sources
+                </CardTitle>
+                <CardDescription>
+                  Gérez les fichiers qui enrichissent les connaissances de cet agent
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1">
+                      Les fichiers permettent à votre agent d'avoir accès à des informations spécifiques
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Formats supportés : PDF, TXT, MD, DOCX, CSV, JSON, HTML
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" className="flex items-center gap-2">
+                    <Link href={`/agents/${agentId}/files`}>
+                      <Upload className="w-4 h-4" />
+                      Gérer les fichiers
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

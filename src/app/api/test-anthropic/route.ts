@@ -14,7 +14,7 @@ export async function GET() {
 
     // Test simple de l'API Anthropic avec un modèle récent
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-5-sonnet-20241204",
       max_tokens: 100,
       messages: [{
         role: "user",

@@ -55,6 +55,7 @@ export type AnthropicConfig = {
   topP: string
   model: string
   fileIds: string[]
+  restrictToDocuments: boolean // Force l'agent à utiliser uniquement les documents fournis
 }
 
 export type ChatRequest = {

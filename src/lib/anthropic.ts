@@ -89,12 +89,25 @@ export class AnthropicService {
     tokensUsed: number
   }> {
     try {
+      // Modifier le prompt système si restriction aux documents est activée
+      let systemPrompt = config.systemPrompt
+      
+      if (config.restrictToDocuments && config.fileIds.length > 0) {
+        systemPrompt = `${config.systemPrompt}
+
+IMPORTANT: Utilise UNIQUEMENT les documents fournis. Si l'info n'y est pas, dis-le clairement.`
+      } else if (config.restrictToDocuments && config.fileIds.length === 0) {
+        systemPrompt = `${config.systemPrompt}
+
+IMPORTANT: Aucun document disponible. Informe l'utilisateur qu'il doit d'abord uploader des documents.`
+      }
+
       const message = await anthropic.messages.create({
         model: config.model,
         max_tokens: parseInt(config.maxTokens),
         temperature: parseFloat(config.temperature),
         top_p: parseFloat(config.topP),
-        system: config.systemPrompt,
+        system: systemPrompt,
         messages: [
           {
             role: "user",
@@ -125,9 +138,48 @@ export class AnthropicService {
         response: responseText,
         tokensUsed: message.usage.output_tokens + message.usage.input_tokens,
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la conversation Anthropic:", error)
-      throw new Error("Impossible de générer une réponse")
+      
+      // Gestion spécifique de l'erreur de rate limit (429)
+      if (error?.status === 429 || error?.error?.type === "rate_limit_error") {
+        const retryAfter = error?.headers?.["retry-after"] || error?.headers?.get?.("retry-after")
+        const resetTime = error?.headers?.["anthropic-ratelimit-input-tokens-reset"] || error?.headers?.get?.("anthropic-ratelimit-input-tokens-reset")
+        
+        let waitMessage = "Limite de taux atteinte."
+        
+        if (retryAfter) {
+          waitMessage += ` Veuillez patienter ${retryAfter} secondes avant de réessayer.`
+        } else if (resetTime) {
+          const resetDate = new Date(resetTime)
+          const waitTimeMs = resetDate.getTime() - Date.now()
+          const waitTimeMin = Math.ceil(waitTimeMs / 60000)
+          waitMessage += ` Veuillez patienter environ ${waitTimeMin} minute(s) avant de réessayer.`
+        } else {
+          waitMessage += " Veuillez patienter quelques minutes avant de réessayer."
+        }
+        
+        // Log des informations de rate limit pour monitoring
+        const inputTokensRemaining = error?.headers?.["anthropic-ratelimit-input-tokens-remaining"] || error?.headers?.get?.("anthropic-ratelimit-input-tokens-remaining")
+        const inputTokensLimit = error?.headers?.["anthropic-ratelimit-input-tokens-limit"] || error?.headers?.get?.("anthropic-ratelimit-input-tokens-limit")
+        
+        console.warn(`Rate limit atteint - Tokens restants: ${inputTokensRemaining}/${inputTokensLimit}`)
+        
+        throw new Error(waitMessage)
+      }
+      
+      // Gestion spécifique des erreurs connues
+      if (error?.error?.message?.includes("A maximum of 100 PDF pages may be provided")) {
+        throw new Error("Le fichier PDF dépasse la limite de 100 pages. Veuillez utiliser un fichier plus court ou le diviser en sections plus petites.")
+      }
+      
+      if (error?.error?.message?.includes("file size")) {
+        throw new Error("Le fichier est trop volumineux. Veuillez utiliser un fichier de taille réduite.")
+      }
+      
+      // Message générique pour les autres erreurs
+      const errorMessage = error?.error?.message || error?.message || "Erreur inconnue"
+      throw new Error(`Impossible de générer une réponse: ${errorMessage}`)
     }
   }
 
