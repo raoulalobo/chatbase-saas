@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useConversation, useConversationsStore } from "@/stores/conversationsStore"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/hooks/useToast"
 import { formatDistanceToNow, format } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -28,6 +30,8 @@ export default function ConversationDetailPage() {
   const conversationId = params.id as string
 
   const conversation = useConversation(conversationId)
+  const { openConfirmDialog, ConfirmDialog } = useConfirmDialog()
+  const { toast } = useToast()
   const { 
     sendChatMessage, 
     isLoading, 
@@ -80,16 +84,38 @@ export default function ConversationDetailPage() {
   const handleDelete = async () => {
     if (!conversation) return
     
-    const confirmed = confirm(
-      `Êtes-vous sûr de vouloir supprimer cette conversation avec "${conversation.visitorId}" ? Cette action est irréversible.`
-    )
-    
-    if (confirmed) {
-      const result = await deleteConversation(conversation.id)
-      if (result.success) {
-        router.push('/conversations')
+    openConfirmDialog({
+      title: "Supprimer la conversation",
+      description: `Êtes-vous sûr de vouloir supprimer cette conversation avec "${conversation.visitorId}" ? Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      cancelLabel: "Annuler",
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          const result = await deleteConversation(conversation.id)
+          if (result.success) {
+            toast({
+              title: "Conversation supprimée",
+              description: `La conversation avec "${conversation.visitorId}" a été supprimée avec succès.`,
+              variant: "success",
+            })
+            router.push('/conversations')
+          } else {
+            toast({
+              title: "Erreur",
+              description: result.error || "Une erreur est survenue lors de la suppression.",
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          toast({
+            title: "Erreur",
+            description: "Une erreur inattendue est survenue.",
+            variant: "destructive",
+          })
+        }
       }
-    }
+    })
   }
 
   // État de chargement
@@ -301,6 +327,7 @@ export default function ConversationDetailPage() {
           </CardContent>
         </Card>
       </div>
+      {ConfirmDialog}
     </AppLayout>
   )
 }

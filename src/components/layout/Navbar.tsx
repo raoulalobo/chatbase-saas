@@ -12,7 +12,8 @@ import {
   Bell,
   Search,
   Menu,
-  X
+  X,
+  LogOut
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -31,6 +32,7 @@ import {
   SheetClose,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { useAuth } from "@/stores/authStore"
 
 /**
  * Navigation horizontale principale de l'application
@@ -72,6 +74,12 @@ const navigationItems = [
 export function Navbar() {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
+  const { user, logout, isLoading } = useAuth()
+  
+  // Gestion de la déconnexion
+  const handleLogout = async () => {
+    await logout()
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-200">
@@ -149,8 +157,8 @@ export function Navbar() {
                     <User2 className="w-4 h-4 text-slate-600" />
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-slate-900">Utilisateur</p>
-                    <p className="text-xs text-slate-600">test@example.com</p>
+                    <p className="text-sm font-medium text-slate-900">{user?.name || 'Utilisateur'}</p>
+                    <p className="text-xs text-slate-600">{user?.email || 'test@example.com'}</p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-slate-500 hidden sm:block" />
                 </Button>
@@ -164,8 +172,13 @@ export function Navbar() {
                   <Settings className="w-4 h-4 mr-2" />
                   Paramètres
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600">
-                  <span>Déconnexion</span>
+                <DropdownMenuItem 
+                  className="text-red-600 cursor-pointer"
+                  onClick={handleLogout}
+                  disabled={isLoading}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  <span>{isLoading ? 'Déconnexion...' : 'Déconnexion'}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -135,24 +135,10 @@ export async function GET(request: NextRequest) {
       ? Math.round(((lastMonthConversations / Math.max(totalConversations - lastMonthConversations, 1)) * 100))
       : 0
 
-    // Statistiques des fichiers
-    const totalFilesResult = await db
-      .select({ count: count() })
-      .from(agentFiles)
-      .innerJoin(agents, eq(agentFiles.agentId, agents.id))
-      .where(eq(agents.userId, userId))
-
-    const recentFilesResult = await db
-      .select({ count: count() })
-      .from(agentFiles)
-      .innerJoin(agents, eq(agentFiles.agentId, agents.id))
-      .where(and(
-        eq(agents.userId, userId),
-        gte(agentFiles.uploadDate, sevenDaysAgo)
-      ))
-
-    const totalFiles = totalFilesResult[0]?.count || 0
-    const recentFiles = recentFilesResult[0]?.count || 0
+    // Statistiques des fichiers (supprimées avec nouvelle architecture anti-hallucination)
+    // Les agents utilisent maintenant des templates JSON au lieu de fichiers uploadés
+    const totalFiles = 0
+    const recentFiles = 0
 
     // Score de satisfaction (basé sur le ratio messages/conversations)
     // Plus il y a de messages par conversation, meilleur est l'engagement

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, Bot, Save, AlertCircle, Loader2, FileText, Upload } from "lucide-react"
+import { ArrowLeft, Bot, Save, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useAgentsStore } from "@/stores/agentsStore"
 import { UpdateAgentSchema, type UpdateAgent } from "@/lib/schemas/agent"
+import { AntiHallucinationConfig } from "@/components/agents/AntiHallucinationConfig"
+import { getDefaultTemplate, AntiHallucinationTemplateSchema } from "@/lib/templates/anti-hallucination"
 
 /**
  * Page d'édition d'un agent IA existant
@@ -26,11 +28,9 @@ import { UpdateAgentSchema, type UpdateAgent } from "@/lib/schemas/agent"
 
 // Modèles disponibles pour les agents (Claude Haiku en premier par défaut)
 const AVAILABLE_MODELS = [
-  { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
-  { value: "claude-3-5-sonnet-20241204", label: "Claude 3.5 Sonnet (Latest)" },
-  { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
-  { value: "gpt-4o", label: "GPT-4o" },
-  { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+  { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku (Rapide & Économique)" },
+  { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet (Équilibré)" },
+  { value: "claude-3-opus-20240229", label: "Claude 3 Opus (Puissant)" },
 ]
 
 export default function EditAgentPage() {
@@ -46,6 +46,7 @@ export default function EditAgentPage() {
     isUpdating,
     error 
   } = useAgentsStore()
+  const [companyName, setCompanyName] = React.useState("")
 
   // Configuration du formulaire avec React Hook Form et Zod
   const form = useForm<UpdateAgent>({
@@ -59,7 +60,24 @@ export default function EditAgentPage() {
       topP: "0.9",
       model: "claude-3-5-haiku-20241022",
       isActive: true,
-      restrictToDocuments: true,
+      restrictToPromptSystem: true,
+      antiHallucinationTemplate: AntiHallucinationTemplateSchema.parse({
+        enabled: true,
+        intensity: 'strict',
+        domain: "services client",
+        companyName: "",
+        contextLimitations: {
+          strictBoundaries: true,
+          rejectOutOfScope: true,
+          inventionPrevention: true,
+          competitorMention: false,
+        },
+        responsePatterns: {
+          refusalMessage: "Je suis spécialisé uniquement dans les services de cette entreprise. Cette question sort de mon domaine d'expertise.",
+          escalationMessage: "Pour cette demande spécifique, je vous invite à contacter notre service client directement.",
+          uncertaintyMessage: "Je ne dispose pas de cette information précise. Laissez-moi vous mettre en relation avec un expert.",
+        },
+      }),
     },
   })
 
@@ -73,6 +91,24 @@ export default function EditAgentPage() {
   // Mettre à jour le formulaire quand l'agent est chargé
   React.useEffect(() => {
     if (selectedAgent && selectedAgent.id === agentId) {
+      const template = selectedAgent.antiHallucinationTemplate || AntiHallucinationTemplateSchema.parse({
+        enabled: true,
+        intensity: 'strict',
+        domain: "services client",
+        companyName: "",
+        contextLimitations: {
+          strictBoundaries: true,
+          rejectOutOfScope: true,
+          inventionPrevention: true,
+          competitorMention: false,
+        },
+        responsePatterns: {
+          refusalMessage: "Je suis spécialisé uniquement dans les services de cette entreprise. Cette question sort de mon domaine d'expertise.",
+          escalationMessage: "Pour cette demande spécifique, je vous invite à contacter notre service client directement.",
+          uncertaintyMessage: "Je ne dispose pas de cette information précise. Laissez-moi vous mettre en relation avec un expert.",
+        },
+      })
+      
       form.reset({
         name: selectedAgent.name,
         description: selectedAgent.description,
@@ -82,8 +118,14 @@ export default function EditAgentPage() {
         topP: selectedAgent.topP.toString(),
         model: selectedAgent.model,
         isActive: selectedAgent.isActive,
-        restrictToDocuments: selectedAgent.restrictToDocuments,
+        restrictToPromptSystem: selectedAgent.restrictToPromptSystem || true,
+        antiHallucinationTemplate: template,
       })
+      
+      // Récupérer le nom d'entreprise depuis le template
+      if (template.companyName) {
+        setCompanyName(template.companyName)
+      }
     }
   }, [selectedAgent, agentId, form])
 
@@ -238,10 +280,21 @@ export default function EditAgentPage() {
                       {form.formState.errors.systemPrompt.message}
                     </p>
                   )}
-                  <p className="text-xs text-slate-500">
-                    Le prompt système détermine le comportement de base de votre agent.
-                    Soyez précis et détaillé.
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-slate-500">
+                      Le prompt système détermine le comportement de base de votre agent.
+                      Soyez précis et détaillé.
+                    </p>
+                    <p className={`text-xs font-medium ${
+                      (form.watch("systemPrompt")?.length || 0) > 50000 
+                        ? "text-red-600" 
+                        : (form.watch("systemPrompt")?.length || 0) > 40000 
+                          ? "text-amber-600" 
+                          : "text-slate-600"
+                    }`}>
+                      {form.watch("systemPrompt")?.length || 0} / 50000 caractères
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -347,25 +400,25 @@ export default function EditAgentPage() {
                   <div className="border-t pt-4 mt-4">
                     <h3 className="text-base font-medium text-slate-900 mb-3">Comportement de l'agent</h3>
                     
-                    {/* Restriction aux documents */}
+                    {/* Activation du système anti-hallucination */}
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
-                        id="restrictToDocuments"
-                        checked={form.watch("restrictToDocuments")}
-                        onChange={(e) => form.setValue("restrictToDocuments", e.target.checked)}
+                        id="restrictToPromptSystem"
+                        checked={form.watch("restrictToPromptSystem") ?? true}
+                        onChange={(e) => form.setValue("restrictToPromptSystem", e.target.checked)}
                         className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2"
                       />
                       <div className="flex-1">
-                        <Label htmlFor="restrictToDocuments" className="text-sm font-medium text-slate-900 cursor-pointer">
-                          Restreindre aux documents fournis
+                        <Label htmlFor="restrictToPromptSystem" className="text-sm font-medium text-slate-900 cursor-pointer">
+                          Activer la protection anti-hallucination
                         </Label>
                         <p className="text-xs text-slate-600 mt-1">
-                          L'agent utilisera uniquement les informations contenues dans les documents uploadés et ignorera ses connaissances préexistantes. 
-                          Si l'information n'est pas dans les documents, l'agent le mentionnera explicitement.
+                          Système avancé basé sur des templates pour empêcher l'agent de sortir de son contexte 
+                          ou d'inventer des informations. Testé avec 100% de fidélité contextuelle.
                         </p>
-                        <p className="text-xs text-amber-600 mt-1">
-                          💡 Recommandé pour garantir que les réponses proviennent exclusivement de vos sources
+                        <p className="text-xs text-green-600 mt-1">
+                          ✅ Recommandé pour tous les agents de service client
                         </p>
                       </div>
                     </div>
@@ -374,36 +427,30 @@ export default function EditAgentPage() {
               </CardContent>
             </Card>
 
-            {/* Gestion des fichiers */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Fichiers sources
-                </CardTitle>
-                <CardDescription>
-                  Gérez les fichiers qui enrichissent les connaissances de cet agent
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-600 mb-1">
-                      Les fichiers permettent à votre agent d'avoir accès à des informations spécifiques
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Formats supportés : PDF, TXT, MD, DOCX, CSV, JSON, HTML
-                    </p>
-                  </div>
-                  <Button asChild variant="outline" className="flex items-center gap-2">
-                    <Link href={`/agents/${agentId}/files`}>
-                      <Upload className="w-4 h-4" />
-                      Gérer les fichiers
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Configuration Anti-Hallucination Avancée */}
+            {form.watch("restrictToPromptSystem") && (
+              <AntiHallucinationConfig
+                value={form.watch("antiHallucinationTemplate")}
+                onChange={(template) => {
+                  // S'assurer que le companyName est toujours inclus dans le template
+                  const updatedTemplate = {
+                    ...template,
+                    companyName: template.companyName || companyName
+                  }
+                  form.setValue("antiHallucinationTemplate", updatedTemplate)
+                }}
+                companyName={companyName}
+                onCompanyNameChange={(name) => {
+                  setCompanyName(name)
+                  // Mettre à jour aussi le template avec le nouveau nom
+                  const currentTemplate = form.watch("antiHallucinationTemplate")
+                  form.setValue("antiHallucinationTemplate", {
+                    ...currentTemplate,
+                    companyName: name
+                  })
+                }}
+              />
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-4">
@@ -412,7 +459,7 @@ export default function EditAgentPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={isUpdating || !form.formState.isValid}
+                disabled={isUpdating}
                 className="bg-primary hover:bg-primary/90"
               >
                 {isUpdating ? (

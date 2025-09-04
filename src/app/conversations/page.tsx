@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useConversationsList, useConversationsStore } from "@/stores/conversationsStore"
 import { useAgentsList } from "@/stores/agentsStore"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/hooks/useToast"
 import { formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -26,6 +28,8 @@ export default function ConversationsPage() {
   const { conversations, pagination, stats, isLoading, filters } = useConversationsList()
   const { agents } = useAgentsList()
   const { deleteConversation, setFilters, isDeleting } = useConversationsStore()
+  const { openConfirmDialog, ConfirmDialog } = useConfirmDialog()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = React.useState(filters.search || '')
   const [selectedAgent, setSelectedAgent] = React.useState(filters.agentId || '')
 
@@ -48,9 +52,37 @@ export default function ConversationsPage() {
   }, [selectedAgent, filters.agentId, setFilters])
 
   const handleDeleteConversation = async (id: string, visitorId: string) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer la conversation avec "${visitorId}" ? Cette action est irréversible.`)) {
-      await deleteConversation(id)
-    }
+    openConfirmDialog({
+      title: "Supprimer la conversation",
+      description: `Êtes-vous sûr de vouloir supprimer la conversation avec "${visitorId}" ? Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      cancelLabel: "Annuler",
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          const result = await deleteConversation(id)
+          if (result.success) {
+            toast({
+              title: "Conversation supprimée",
+              description: `La conversation avec "${visitorId}" a été supprimée avec succès.`,
+              variant: "success",
+            })
+          } else {
+            toast({
+              title: "Erreur",
+              description: result.error || "Une erreur est survenue lors de la suppression.",
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          toast({
+            title: "Erreur",
+            description: "Une erreur inattendue est survenue.",
+            variant: "destructive",
+          })
+        }
+      }
+    })
   }
 
   // Calculer les statistiques dynamiques
@@ -329,6 +361,7 @@ export default function ConversationsPage() {
           </>
         )}
       </div>
+      {ConfirmDialog}
     </AppLayout>
   )
 }

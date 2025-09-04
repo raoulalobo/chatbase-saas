@@ -1,5 +1,5 @@
 import { eq, desc, and } from "drizzle-orm"
-import { db, users, agents, conversations, messages, agentFiles } from "./index"
+import { db, users, agents, conversations, messages } from "./index"
 import { nanoid } from "nanoid"
 
 /**
@@ -88,36 +88,14 @@ export const agentQueries = {
     }
   },
 
-  /**
-   * Obtenir un agent avec ses fichiers
-   */
-  async getWithFiles(agentId: string) {
-    const result = await db
-      .select()
-      .from(agents)
-      .leftJoin(agentFiles, eq(agents.id, agentFiles.agentId))
-      .where(eq(agents.id, agentId))
-
-    const agent = result[0]?.agents
-    if (!agent) return null
-
-    const files = result
-      .filter(row => row.agent_files)
-      .map(row => row.agent_files!)
-
-    return {
-      ...agent,
-      files,
-    }
-  },
+  // Fonction getWithFiles supprimée - architecture fichiers remplacée par templates anti-hallucination
 
   /**
-   * Obtenir un agent complet (utilisateur + fichiers)
+   * Obtenir un agent complet avec utilisateur (fichiers supprimés)
    */
   async getFull(agentId: string) {
     const agentData = await db.select().from(agents).where(eq(agents.id, agentId))
     const userData = await db.select().from(users).where(eq(users.id, agentData[0]?.userId))
-    const filesData = await db.select().from(agentFiles).where(eq(agentFiles.agentId, agentId))
 
     const agent = agentData[0]
     const user = userData[0]
@@ -127,7 +105,7 @@ export const agentQueries = {
     return {
       ...agent,
       user,
-      files: filesData,
+      // Fichiers supprimés - agents utilisent templates anti-hallucination
     }
   },
 
@@ -143,6 +121,8 @@ export const agentQueries = {
     topP: string
     model: string
     isActive: boolean
+    restrictToPromptSystem: boolean
+    antiHallucinationTemplate: any // JSON object sera sérialisé au niveau API
     anthropicFileIds: string[]
   }>) {
     const [agent] = await db
@@ -269,79 +249,4 @@ export const messageQueries = {
   },
 }
 
-// Fonctions pour les fichiers des agents
-export const agentFileQueries = {
-  /**
-   * Ajouter un fichier à un agent
-   */
-  async create(data: {
-    agentId: string
-    originalFilename: string
-    anthropicFileId: string
-    fileType?: string
-    fileSize?: string
-  }) {
-    const id = nanoid()
-    const [file] = await db.insert(agentFiles).values({
-      id,
-      ...data,
-    }).returning()
-    return file
-  },
-
-  /**
-   * Obtenir tous les fichiers d'un agent
-   */
-  async getByAgentId(agentId: string) {
-    return await db
-      .select()
-      .from(agentFiles)
-      .where(eq(agentFiles.agentId, agentId))
-      .orderBy(desc(agentFiles.uploadDate))
-  },
-
-  /**
-   * Mettre à jour le statut d'un fichier
-   */
-  async updateStatus(id: string, status: "uploading" | "ready" | "error") {
-    const [file] = await db
-      .update(agentFiles)
-      .set({ status })
-      .where(eq(agentFiles.id, id))
-      .returning()
-    return file
-  },
-
-  /**
-   * Mettre à jour un fichier avec l'ID Anthropic et le statut
-   */
-  async updateWithAnthropicId(id: string, anthropicFileId: string, status: "uploading" | "ready" | "error" = "ready") {
-    const [file] = await db
-      .update(agentFiles)
-      .set({ 
-        anthropicFileId,
-        status 
-      })
-      .where(eq(agentFiles.id, id))
-      .returning()
-    return file
-  },
-
-  /**
-   * Supprimer un fichier
-   */
-  async delete(id: string) {
-    await db.delete(agentFiles).where(eq(agentFiles.id, id))
-  },
-
-  /**
-   * Obtenir un fichier par son ID Anthropic
-   */
-  async getByAnthropicId(anthropicFileId: string) {
-    const [file] = await db
-      .select()
-      .from(agentFiles)
-      .where(eq(agentFiles.anthropicFileId, anthropicFileId))
-    return file || null
-  },
-}
+// agentFileQueries supprimées - architecture fichiers remplacée par système anti-hallucination basé sur templates JSON

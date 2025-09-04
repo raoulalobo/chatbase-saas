@@ -177,15 +177,30 @@ const useAuthStore = create<AuthState>()(
 
         // Action de déconnexion
         logout: async () => {
+          console.log('🔓 Début du logout...')
           set({ isLoading: true })
           
           try {
+            console.log('📤 Appel signOut NextAuth...')
             await signOut({ redirect: false })
+            console.log('✅ signOut NextAuth terminé')
+            
             get().clearAuth()
+            console.log('🧹 État local nettoyé')
+            
+            // Redirection vers la page d'accueil
+            if (typeof window !== 'undefined') {
+              console.log('🏠 Redirection vers /')
+              window.location.href = '/'
+            }
           } catch (error) {
-            console.error('Erreur lors de la déconnexion:', error)
+            console.error('❌ Erreur lors de la déconnexion:', error)
             // Forcer la déconnexion locale même en cas d'erreur
             get().clearAuth()
+            // Redirection forcée même en cas d'erreur
+            if (typeof window !== 'undefined') {
+              window.location.href = '/'
+            }
           }
         },
 

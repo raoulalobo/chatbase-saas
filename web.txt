@@ -1,0 +1,165 @@
+Pour brider le tool `web_search` afin qu'il ne sorte pas des liens fournis en entrée par l'utilisateur, voici plusieurs approches techniques :
+
+## 1. Filtrage par domaine autorisé
+
+```python
+def restricted_web_search(query, allowed_domains=None):
+    """
+    Recherche web restreinte à certains domaines
+    """
+    if allowed_domains:
+        # Ajouter une restriction de domaine à la requête
+        domain_filter = " site:" + " OR site:".join(allowed_domains)
+        restricted_query = f"{query}{domain_filter}"
+    else:
+        restricted_query = query
+    
+    results = web_search_api(restricted_query)
+    
+    # Double filtrage côté client
+    if allowed_domains:
+        filtered_results = []
+        for result in results:
+            domain = extract_domain(result['url'])
+            if domain in allowed_domains:
+                filtered_results.append(result)
+        return filtered_results
+    
+    return results
+```
+
+## 2. Validation des URLs en sortie
+
+```python
+def validate_search_results(results, user_provided_urls):
+    """
+    Valide que les résultats proviennent uniquement des URLs autorisées
+    """
+    allowed_domains = set()
+    for url in user_provided_urls:
+        domain = extract_domain(url)
+        allowed_domains.add(domain)
+    
+    validated_results = []
+    for result in results:
+        result_domain = extract_domain(result['url'])
+        if result_domain in allowed_domains:
+            validated_results.append(result)
+        else:
+            # Log ou signaler l'URL rejetée
+            log_rejected_url(result['url'])
+    
+    return validated_results
+```
+
+## 3. Configuration au niveau de l'API
+
+```python
+class RestrictedWebSearchAPI:
+    def __init__(self, base_api, restriction_mode="domain"):
+        self.base_api = base_api
+        self.restriction_mode = restriction_mode
+        self.allowed_sources = set()
+    
+    def set_allowed_sources(self, sources):
+        """Définit les sources autorisées"""
+        if self.restriction_mode == "domain":
+            self.allowed_sources = {extract_domain(url) for url in sources}
+        else:
+            self.allowed_sources = set(sources)
+    
+    def search(self, query):
+        # Effectuer la recherche
+        raw_results = self.base_api.search(query)
+        
+        # Filtrer les résultats
+        filtered_results = []
+        for result in raw_results:
+            if self.is_allowed_source(result['url']):
+                filtered_results.append(result)
+        
+        return filtered_results
+    
+    def is_allowed_source(self, url):
+        if self.restriction_mode == "domain":
+            domain = extract_domain(url)
+            return domain in self.allowed_sources
+        else:
+            return url in self.allowed_sources
+```
+
+## 4. Middleware de contrôle
+
+```python
+def web_search_middleware(original_function):
+    def wrapper(*args, **kwargs):
+        # Récupérer les URLs autorisées du contexte utilisateur
+        user_context = get_user_context()
+        allowed_urls = user_context.get('allowed_sources', [])
+        
+        # Exécuter la recherche originale
+        results = original_function(*args, **kwargs)
+        
+        # Filtrer selon les restrictions
+        if allowed_urls:
+            results = filter_by_allowed_sources(results, allowed_urls)
+        
+        return results
+    
+    return wrapper
+
+# Application du middleware
+@web_search_middleware
+def web_search(query):
+    # Implémentation originale
+    pass
+```
+
+## 5. Configuration par whitelist
+
+```python
+class WhitelistWebSearch:
+    def __init__(self):
+        self.whitelist = set()
+        self.whitelist_mode = "strict"  # "strict" ou "permissive"
+    
+    def add_to_whitelist(self, urls):
+        for url in urls:
+            # Normaliser l'URL
+            normalized_url = normalize_url(url)
+            self.whitelist.add(normalized_url)
+    
+    def search_with_whitelist(self, query):
+        if not self.whitelist:
+            raise ValueError("Aucune source autorisée définie")
+        
+        # Construire une requête restreinte
+        site_restrictions = []
+        for url in self.whitelist:
+            domain = extract_domain(url)
+            site_restrictions.append(f"site:{domain}")
+        
+        restricted_query = f"{query} ({' OR '.join(site_restrictions)})"
+        
+        results = web_search_api(restricted_query)
+        return self.post_filter_results(results)
+    
+    def post_filter_results(self, results):
+        # Filtrage supplémentaire pour s'assurer du respect de la whitelist
+        validated_results = []
+        for result in results:
+            if self.is_url_whitelisted(result['url']):
+                validated_results.append(result)
+        return validated_results
+```
+
+## Points clés pour l'implémentation :
+
+1. **Double validation** : Filtrage au niveau requête ET au niveau résultats
+2. **Normalisation des URLs** : Gérer les variations (www, https/http, etc.)
+3. **Granularité** : Choisir entre filtrage par domaine ou URL exacte
+4. **Logging** : Tracer les URLs rejetées pour debugging
+5. **Configuration utilisateur** : Permettre à l'utilisateur de définir ses sources autorisées
+6. **Gestion d'erreurs** : Que faire si aucun résultat ne passe le filtre
+
+Cette approche garantit que les résultats de recherche restent dans le périmètre défini par l'utilisateur.

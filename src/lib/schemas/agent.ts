@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { AntiHallucinationTemplateSchema, type HallucinationIntensity } from "@/lib/templates/anti-hallucination"
 
 /**
  * Schémas de validation Zod pour les agents IA
@@ -23,7 +24,7 @@ export const AgentBaseSchema = z.object({
   systemPrompt: z
     .string()
     .min(10, "Le prompt système doit contenir au moins 10 caractères")
-    .max(4000, "Le prompt système ne peut pas dépasser 4000 caractères"),
+    .max(50000, "Le prompt système ne peut pas dépasser 50000 caractères"),
   
   // Paramètres Anthropic avec validation stricte
   temperature: z
@@ -60,12 +61,33 @@ export const AgentBaseSchema = z.object({
     .string()
     .min(1, "Le modèle est obligatoire")
     .refine(
-      (val) => val.startsWith("claude-"),
+      (val) => [
+        "claude-3-5-haiku-20241022",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-opus-20240229"
+      ].includes(val),
       "Le modèle doit être un modèle Claude valide"
     ),
   
   isActive: z.boolean().default(true),
-  restrictToDocuments: z.boolean().default(true), // Force l'agent à utiliser uniquement les documents fournis
+  restrictToPromptSystem: z.boolean().default(true), // Active le système anti-hallucination basé sur templates
+  antiHallucinationTemplate: AntiHallucinationTemplateSchema.default({
+    enabled: true,
+    intensity: 'strict',
+    domain: "services client",
+    companyName: "", // Champ obligatoire pour personnalisation
+    contextLimitations: {
+      strictBoundaries: true,
+      rejectOutOfScope: true,
+      inventionPrevention: true,
+      competitorMention: false,
+    },
+    responsePatterns: {
+      refusalMessage: "Je suis spécialisé uniquement dans les services de cette entreprise. Cette question sort de mon domaine d'expertise.",
+      escalationMessage: "Pour cette demande spécifique, je vous invite à contacter notre service client directement.",
+      uncertaintyMessage: "Je ne dispose pas de cette information précise. Laissez-moi vous mettre en relation avec un expert.",
+    },
+  }), // Template JSON pour configuration anti-hallucination
 })
 
 // Schéma pour la création d'un agent
@@ -102,7 +124,7 @@ export const AgentParamsSchema = z.object({
   id: z
     .string()
     .min(1, "L'ID de l'agent est obligatoire")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Format d'ID invalide"),
+    .regex(/^[a-zA-Z0-9._-]+$/, "Format d'ID invalide"),
 })
 
 // Schéma pour la validation des fichiers uploadés
@@ -164,7 +186,8 @@ export const AgentResponseSchema = z.object({
   topP: z.string(),
   model: z.string(),
   isActive: z.boolean(),
-  restrictToDocuments: z.boolean(),
+  restrictToPromptSystem: z.boolean(),
+  antiHallucinationTemplate: AntiHallucinationTemplateSchema,
   userId: z.string(),
   createdAt: z.string(), // ISO date string
   updatedAt: z.string(), // ISO date string
@@ -211,6 +234,8 @@ export const AGENT_ERROR_MESSAGES = {
   INVALID_TEMPERATURE: "La température doit être un nombre entre 0 et 1",
   INVALID_TOKENS: "Le nombre de tokens doit être entre 1 et 8192",
   INVALID_MODEL: "Veuillez sélectionner un modèle Claude valide",
+  INVALID_ANTI_HALLUCINATION: "Configuration anti-hallucination invalide",
+  INVALID_INTENSITY: "Niveau d'intensité anti-hallucination invalide",
   AGENT_NOT_FOUND: "Agent non trouvé",
   UNAUTHORIZED: "Vous n'êtes pas autorisé à accéder à cet agent",
   CREATION_FAILED: "Erreur lors de la création de l'agent",

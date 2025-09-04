@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, serial } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, boolean, serial, jsonb } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
 /**
@@ -30,26 +30,16 @@ export const agents = pgTable("agents", {
   topP: text("top_p").default("1.0").notNull(), // 0.0 à 1.0
   model: text("model").default("claude-3-5-haiku-20241022").notNull(), // Claude Haiku par défaut pour optimiser les coûts
   
-  // État et fichiers
+  // État et configuration anti-hallucination
   isActive: boolean("is_active").default(true).notNull(),
-  restrictToDocuments: boolean("restrict_to_documents").default(true).notNull(), // Force l'agent à utiliser uniquement les documents fournis
-  anthropicFileIds: text("anthropic_file_ids").array(), // Array des IDs fichiers Anthropic
+  restrictToPromptSystem: boolean("restrict_to_prompt_system").default(true).notNull(), // Active système anti-hallucination
+  antiHallucinationTemplate: jsonb("anti_hallucination_template"), // Template JSON pour configuration anti-hallucination
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-// Table des fichiers associés aux agents
-export const agentFiles = pgTable("agent_files", {
-  id: text("id").primaryKey(),
-  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
-  originalFilename: text("original_filename").notNull(), // Nom original du fichier
-  anthropicFileId: text("anthropic_file_id").notNull(), // ID retourné par l'API Anthropic
-  fileType: text("file_type"), // Type MIME du fichier
-  fileSize: text("file_size"), // Taille en bytes (stocké en string pour éviter overflow)
-  uploadDate: timestamp("upload_date").defaultNow().notNull(),
-  status: text("status").default("uploading").notNull(), // uploading, ready, error
-})
+// Table des fichiers supprimée - remplacée par système anti-hallucination basé sur templates JSON
 
 // Table des conversations
 export const conversations = pgTable("conversations", {
@@ -112,7 +102,7 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
     references: [users.id],
   }),
   conversations: many(conversations),
-  files: many(agentFiles), // Relation vers les fichiers de l'agent
+  // Fichiers supprimés - agents utilisent templates anti-hallucination JSON
 }))
 
 export const conversationsRelations = relations(conversations, ({ one, many }) => ({
@@ -144,9 +134,4 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   }),
 }))
 
-export const agentFilesRelations = relations(agentFiles, ({ one }) => ({
-  agent: one(agents, {
-    fields: [agentFiles.agentId],
-    references: [agents.id],
-  }),
-}))
+// Relations agentFiles supprimées - architecture fichiers remplacée par templates JSON

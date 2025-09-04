@@ -23,6 +23,10 @@ import {
  * POST /api/agents - Création d'un nouvel agent
  */
 
+// Configuration pour augmenter la limite de taille du body
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 // GET /api/agents - Récupérer la liste des agents
 export async function GET(request: NextRequest) {
   try {
@@ -164,7 +168,8 @@ export async function POST(request: NextRequest) {
         topP: agentData.topP,
         model: agentData.model,
         isActive: agentData.isActive,
-        restrictToDocuments: agentData.restrictToDocuments,
+        restrictToPromptSystem: agentData.restrictToPromptSystem,
+        antiHallucinationTemplate: agentData.antiHallucinationTemplate,
         createdAt: now,
         updatedAt: now,
       })

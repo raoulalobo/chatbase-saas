@@ -21,6 +21,10 @@ import {
  * DELETE /api/agents/[id] - Supprimer un agent
  */
 
+// Configuration pour augmenter la limite de taille du body
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 // GET /api/agents/[id] - Récupérer un agent spécifique
 export async function GET(
   request: NextRequest,
@@ -59,11 +63,12 @@ export async function GET(
       return ApiErrorHandler.notFound("Agent")
     }
 
-    // Format de la réponse
+    // Format de la réponse (le template anti-hallucination est déjà un objet JSONB)
+    const agentData = agent[0]
     const responseData: AgentResponse = {
-      ...agent[0],
-      createdAt: agent[0].createdAt.toISOString(),
-      updatedAt: agent[0].updatedAt.toISOString(),
+      ...agentData,
+      createdAt: agentData.createdAt.toISOString(),
+      updatedAt: agentData.updatedAt.toISOString(),
       // TODO: Ajouter les compteurs réels
       _count: {
         conversations: 0,
@@ -145,11 +150,14 @@ export async function PUT(
       }
     }
 
+    // Préparer les données de mise à jour (JSONB gère automatiquement les objets)
+    const processedUpdateData = { ...updateData }
+    
     // Mise à jour de l'agent
     const updatedAgent = await db
       .update(agents)
       .set({
-        ...updateData,
+        ...processedUpdateData,
         updatedAt: new Date(),
       })
       .where(
@@ -164,11 +172,12 @@ export async function PUT(
       return ApiErrorHandler.notFound("Agent")
     }
 
-    // Format de la réponse
+    // Format de la réponse (JSONB retourne déjà l'objet correctement)
+    const updatedAgentData = updatedAgent[0]
     const responseData: AgentResponse = {
-      ...updatedAgent[0],
-      createdAt: updatedAgent[0].createdAt.toISOString(),
-      updatedAt: updatedAgent[0].updatedAt.toISOString(),
+      ...updatedAgentData,
+      createdAt: updatedAgentData.createdAt.toISOString(),
+      updatedAt: updatedAgentData.updatedAt.toISOString(),
     }
 
     return createSuccessResponse(

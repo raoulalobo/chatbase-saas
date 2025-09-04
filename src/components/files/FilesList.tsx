@@ -20,42 +20,133 @@ import { useFiles } from "@/stores/filesStore"
 import type { FileResponse } from "@/lib/schemas/file"
 
 /**
- * Composant principal pour afficher et gérer la liste des fichiers
- * - Recherche et filtres avancés
- * - Tri par différents critères
- * - Actions bulk (futures)
- * - Pagination intégrée
+ * Composant React principal pour l'affichage et la gestion des fichiers
+ * 
+ * Ce composant constitue l'interface principale de gestion des fichiers dans l'application.
+ * Il intègre toutes les fonctionnalités de recherche, filtrage, tri, et actions utilisateur
+ * dans une interface cohérente et performante.
+ * 
+ * @component FilesList
+ * @category Files Management
+ * 
+ * @features
+ * - **Recherche en temps réel** : Debouncing automatique avec indicateur visuel
+ * - **Filtres avancés** : Par statut, type, agent avec compteurs dynamiques
+ * - **Tri multi-critères** : Par nom, date, taille avec ordre asc/desc
+ * - **Pagination intégrée** : Navigation fluide avec informations de contexte
+ * - **Actions contextuelles** : Suppression, visualisation, actions bulk futures
+ * - **États de chargement** : Skeleton loaders et indicateurs de progression
+ * - **Gestion d'erreurs** : Messages utilisateur avec actions de récupération
+ * - **État vide** : Interface adaptée quand aucun fichier n'est trouvé
+ * 
+ * @architecture
+ * - **State Management** : Intégration native avec le store Zustand via useFiles()
+ * - **Performance** : Debouncing des recherches, mémorisation des compteurs
+ * - **Accessibility** : Navigation clavier, labels ARIA, focus management
+ * - **Responsive** : Adaptable mobile/desktop avec breakpoints Tailwind
+ * 
+ * @ux
+ * - **Feedback immédiat** : Mise à jour temps réel des résultats
+ * - **Contexte visuel** : Compteurs par statut, informations de pagination
+ * - **Actions intuitives** : Boutons et menus contextuels bien placés
+ * - **État de chargement** : Skeleton UI pendant les requêtes
+ * - **Recovery** : Actions pour récupérer des erreurs (retry, clear filters)
+ * 
+ * @example
+ * ```tsx
+ * // Usage basique
+ * <FilesList />
+ * 
+ * // Avec callbacks personnalisés
+ * <FilesList 
+ *   onFileView={(file) => openFileModal(file)}
+ *   onFileDelete={(file) => confirmDelete(file)}
+ *   showAgent={false}
+ * />
+ * ```
+ * 
+ * @performance
+ * - Debouncing de recherche (500ms) pour éviter les requêtes excessives
+ * - Mémorisation des compteurs de statut avec useMemo()
+ * - Lazy loading des composants FileItem avec React.memo()
+ * - Pagination pour limiter le nombre d'éléments DOM
  */
 
+/**
+ * Props du composant FilesList pour la customisation du comportement
+ * 
+ * Interface définissant les options de configuration du composant
+ * pour s'adapter aux différents contextes d'utilisation.
+ */
 interface FilesListProps {
+  /** Callback exécuté lors du clic sur "Voir les détails" d'un fichier */
   onFileView?: (file: FileResponse) => void
+  /** Callback exécuté lors de la suppression d'un fichier */
   onFileDelete?: (file: FileResponse) => void
+  /** Afficher la colonne Agent dans la liste (défaut: true) */
   showAgent?: boolean
+  /** Classes CSS supplémentaires pour le conteneur */
   className?: string
 }
 
+/**
+ * Composant principal FilesList avec logique de gestion d'état et rendu
+ * 
+ * Implémente l'interface complète de gestion des fichiers avec intégration
+ * au store global, gestion des événements utilisateur, et rendu optimisé.
+ * 
+ * @param {FilesListProps} props Configuration du composant
+ */
 export function FilesList({ 
   onFileView, 
   onFileDelete,
   showAgent = true,
   className = "" 
 }: FilesListProps) {
+  /**
+   * Intégration avec le store global des fichiers
+   * 
+   * Récupère toutes les données et actions nécessaires depuis
+   * le store Zustand centralisé. Cette approche garantit la
+   * cohérence des données à travers l'application.
+   */
   const {
-    files,
-    isLoading,
-    error,
-    filters,
-    pagination,
-    setFilters,
-    fetchFiles,
-    deleteFile,
-    clearError
+    files,           // Liste des fichiers actuellement affichés
+    isLoading,       // Flag de chargement pour les indicateurs UI
+    error,           // Erreur actuelle à afficher à l'utilisateur
+    filters,         // Configuration actuelle des filtres
+    pagination,      // Métadonnées de pagination
+    setFilters,      // Fonction pour modifier les filtres
+    fetchFiles,      // Fonction pour recharger les fichiers
+    deleteFile,      // Fonction pour supprimer un fichier
+    clearError       // Fonction pour effacer l'erreur actuelle
   } = useFiles()
 
+  /**
+   * État local pour la gestion de la recherche avec debouncing
+   * 
+   * Maintient une copie locale du terme de recherche pour permettre
+   * une saisie fluide sans déclencher de requêtes à chaque frappe.
+   */
   const [searchTerm, setSearchTerm] = React.useState(filters.search || "")
+  
+  /**
+   * État local pour tracker les suppressions en cours
+   * 
+   * Permet d'afficher des indicateurs visuels spécifiques à chaque
+   * fichier en cours de suppression (ex: opacity réduite, spinner).
+   */
   const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
 
-  // Debounce pour la recherche
+  /**
+   * Effet de debouncing pour la recherche textuelle
+   * 
+   * Implémente un délai de 500ms avant de déclencher la recherche
+   * pour éviter les requêtes excessives pendant la saisie utilisateur.
+   * 
+   * @pattern Debouncing - Améliore les performances et l'expérience utilisateur
+   * @delay 500ms - Équilibre entre réactivité et performance
+   */
   React.useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm !== filters.search) {
@@ -64,31 +155,82 @@ export function FilesList({
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [searchTerm, filters.search]) // Retirer setFilters des dépendances
+  }, [searchTerm, filters.search]) // setFilters est volontairement exclu pour éviter les loops
 
-  // Gérer la suppression
+  /**
+   * Gestionnaire de suppression de fichiers
+   * 
+   * Gère la logique de suppression avec support pour les callbacks
+   * personnalisés et les indicateurs visuels de progression.
+   * 
+   * @param {FileResponse} file - Fichier à supprimer
+   * 
+   * @flow
+   * 1. Vérifie si un callback personnalisé est fourni
+   * 2. Si oui, délègue la gestion au parent
+   * 3. Sinon, gère la suppression avec le store
+   * 4. Affiche les indicateurs visuels pendant l'opération
+   */
   const handleDelete = async (file: FileResponse) => {
+    /**
+     * Délégation au callback parent si fourni
+     * 
+     * Permet aux composants parents de gérer la suppression
+     * avec leur propre logique (ex: modal de confirmation).
+     */
     if (onFileDelete) {
       onFileDelete(file)
       return
     }
 
+    /**
+     * Gestion de la suppression via le store
+     * 
+     * Active l'indicateur visuel, exécute la suppression,
+     * et nettoie l'état local après l'opération.
+     */
     setIsDeleting(file.id)
     const success = await deleteFile(file.id)
     if (success) {
-      // Optionellement afficher une notification de succès
+      // Success feedback est géré automatiquement par le store
+      // ou peut être ajouté ici (toast, notification, etc.)
     }
     setIsDeleting(null)
   }
 
-  // Gérer la vue
+  /**
+   * Gestionnaire de visualisation de fichiers
+   * 
+   * Délègue l'action de visualisation au callback parent
+   * si fourni, sinon l'action est ignorée silencieusement.
+   * 
+   * @param {FileResponse} file - Fichier à visualiser
+   */
   const handleView = (file: FileResponse) => {
     if (onFileView) {
       onFileView(file)
     }
   }
 
-  // Compteurs pour les filtres
+  /**
+   * Calcul mémorisé des compteurs de statut
+   * 
+   * Calcule dynamiquement le nombre de fichiers par statut
+   * pour afficher des compteurs informatifs dans les filtres.
+   * Mémorisé pour éviter les recalculs à chaque render.
+   * 
+   * @memoization Se recalcule uniquement si la liste des fichiers change
+   * @returns {Record<string, number>} Compteurs par statut
+   * 
+   * @example
+   * ```
+   * {
+   *   "ready": 15,
+   *   "uploading": 2, 
+   *   "error": 1
+   * }
+   * ```
+   */
   const statusCounts = React.useMemo(() => {
     return files.reduce((acc, file) => {
       acc[file.status] = (acc[file.status] || 0) + 1

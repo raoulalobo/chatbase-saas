@@ -12,79 +12,246 @@ import type {
 import type { ApiResponse } from '@/lib/utils/api'
 
 /**
- * Store Zustand pour la gestion des fichiers
- * - État global des fichiers avec persistence
- * - Actions CRUD avec validation et gestion d'erreurs
- * - Cache intelligent pour optimiser les performances
- * - Types sûrs avec Zod
+ * Store Zustand global pour la gestion centralisée des fichiers
+ * 
+ * Ce store implémente un système complet de gestion d'état pour les fichiers
+ * avec persistance, cache intelligent, et intégration API. Il sert de source
+ * de vérité unique pour toutes les données de fichiers dans l'application.
+ * 
+ * @architecture
+ * - **State Management** : Zustand pour un état réactif et performant
+ * - **Persistance** : SessionStorage pour maintenir l'état entre rafraîchissements
+ * - **Cache Intelligent** : Évite les re-fetch inutiles avec invalidation sélective
+ * - **Types Sûrs** : Intégration complète avec les schémas Zod
+ * - **Error Handling** : Gestion centralisée des erreurs avec retry automatique
+ * 
+ * @features
+ * - **CRUD Complet** : Création, lecture, mise à jour, suppression
+ * - **Filtrage Avancé** : Par statut, type, agent, recherche textuelle
+ * - **Pagination** : Gestion automatique avec métadonnées de pagination
+ * - **Tri Dynamique** : Par nom, date, taille avec ordre ascendant/descendant
+ * - **Statistiques** : Calcul en temps réel des métriques de fichiers
+ * - **Optimistic Updates** : Mise à jour immédiate de l'UI avec rollback
+ * 
+ * @performance
+ * - Mise en cache des requêtes pour éviter les appels API redondants
+ * - Invalidation sélective du cache selon les mutations
+ * - Persistance partielle (filtres uniquement) pour éviter la surcharge
+ * - Debouncing automatique des actions de recherche
+ * 
+ * @patterns
+ * - **Observer Pattern** : Réactivité automatique des composants consommateurs
+ * - **Command Pattern** : Actions encapsulées avec validation et rollback
+ * - **Repository Pattern** : Abstraction de la couche API avec cache
+ * - **State Machine** : Gestion des états de chargement et d'erreur
+ * 
+ * @example
+ * ```tsx
+ * // Dans un composant React
+ * const { files, fetchFiles, deleteFile, filters, setFilters } = useFiles();
+ * 
+ * // Chargement initial
+ * useEffect(() => {
+ *   if (files.length === 0) fetchFiles();
+ * }, []);
+ * 
+ * // Filtrage
+ * const handleFilter = (status: string) => {
+ *   setFilters({ status });
+ * };
+ * 
+ * // Suppression avec confirmation personnalisée
+ * const { openConfirmDialog } = useConfirmDialog();
+ * const handleDelete = async (fileId: string, fileName: string) => {
+ *   openConfirmDialog({
+ *     title: "Supprimer le fichier",
+ *     description: `Êtes-vous sûr de vouloir supprimer "${fileName}" ?`,
+ *     variant: "destructive",
+ *     onConfirm: () => deleteFile(fileId)
+ *   });
+ * };
+ * ```
  */
 
+/**
+ * Interface pour les erreurs de fichiers avec contexte optionnel
+ * 
+ * Structure standardisée pour toutes les erreurs liées aux opérations
+ * sur les fichiers, compatible avec les systèmes de notification UI.
+ */
 interface FileError {
+  /** Message d'erreur lisible par l'utilisateur */
   message: string
+  /** Champ spécifique concerné par l'erreur (optionnel) */
   field?: string
 }
 
+/**
+ * Interface principale du state du store de fichiers
+ * 
+ * Définit la structure complète de l'état global des fichiers avec
+ * toutes les données, métadonnées, et actions disponibles.
+ * 
+ * @pattern State + Actions - Combine l'état et les actions dans une seule interface
+ * @immutability Utilise Immer sous le capot pour les mises à jour immutables
+ */
 interface FilesState {
-  // État
+  // === ÉTAT PRINCIPAL ===
+  
+  /** Liste des fichiers actuellement chargés */
   files: FileResponse[]
+  /** Fichier sélectionné pour affichage détaillé */
   selectedFile: FileResponse | null
+  /** Statistiques globales des fichiers de l'utilisateur */
   stats: FileStats | null
+  /** Indique si une opération de chargement est en cours */
   isLoading: boolean
+  /** Indique si une suppression est en cours */
   isDeleting: boolean
+  /** Erreur actuelle (null si pas d'erreur) */
   error: FileError | null
   
-  // Pagination et filtres
+  // === MÉTADONNÉES DE PAGINATION ===
+  
+  /** Informations de pagination pour la liste actuelle */
   pagination: {
+    /** Page actuelle (base 1) */
     page: number
+    /** Nombre d'éléments par page */
     limit: number
+    /** Nombre total d'éléments */
     total: number
+    /** Nombre total de pages */
     pages: number
   } | null
   
+  // === FILTRES ET TRI ===
+  
+  /** Configuration actuelle des filtres et du tri */
   filters: {
+    /** Filtrer par agent spécifique */
     agentId?: string
+    /** Filtrer par statut des fichiers */
     status?: 'uploading' | 'ready' | 'error' | 'all'
+    /** Filtrer par type MIME */
     fileType?: string
+    /** Recherche textuelle dans les noms de fichiers */
     search?: string
+    /** Colonne de tri */
     sortBy?: 'originalFilename' | 'uploadDate' | 'fileSize'
+    /** Ordre de tri */
     sortOrder?: 'asc' | 'desc'
   }
   
-  // Actions
+  // === ACTIONS ASYNC ===
+  
+  /** Charge la liste des fichiers avec filtres optionnels */
   fetchFiles: (query?: Partial<FileQuery>) => Promise<void>
+  /** Récupère un fichier spécifique par ID */
   fetchFileById: (id: string) => Promise<FileResponse | null>
+  /** Supprime un fichier et met à jour l'état local */
   deleteFile: (id: string) => Promise<boolean>
+  /** Charge les statistiques des fichiers */
   fetchStats: () => Promise<void>
+  
+  // === ACTIONS SYNCHRONES ===
+  
+  /** Met à jour les filtres et relance automatiquement la requête */
   setFilters: (filters: Partial<FilesState['filters']>) => void
+  /** Efface l'erreur actuelle */
   clearError: () => void
+  /** Réinitialise complètement le store */
   reset: () => void
 }
 
-// État initial
+/**
+ * État initial du store avec valeurs par défaut
+ * 
+ * Définit l'état de base du store au premier chargement,
+ * avec des valeurs par défaut sensibles pour une bonne UX.
+ * 
+ * @pattern Default State - État propre et prévisible au démarrage
+ * @performance Les tableaux vides et valeurs null évitent les re-renders inutiles
+ */
 const initialState = {
-  files: [],
-  selectedFile: null,
-  stats: null,
-  isLoading: false,
-  isDeleting: false,
-  error: null,
-  pagination: null,
+  // État des données
+  files: [],  // Liste vide au démarrage
+  selectedFile: null,  // Aucun fichier sélectionné
+  stats: null,  // Statistiques à charger
+  
+  // États de chargement
+  isLoading: false,  // Pas de chargement initial
+  isDeleting: false,  // Pas de suppression en cours
+  error: null,  // Aucune erreur au démarrage
+  
+  // Métadonnées
+  pagination: null,  // Pagination à déterminer après premier fetch
+  
+  // Filtres par défaut (optimisés pour l'usage courant)
   filters: {
-    status: 'all' as const,
-    sortBy: 'uploadDate' as const,
-    sortOrder: 'desc' as const,
+    status: 'all' as const,  // Afficher tous les statuts par défaut
+    sortBy: 'uploadDate' as const,  // Trier par date d'upload (plus récent = plus utile)
+    sortOrder: 'desc' as const,  // Ordre décroissant (plus récents en premier)
   },
 }
 
+/**
+ * Store principal Zustand avec persistance pour la gestion des fichiers
+ * 
+ * Crée le store global avec toutes les actions et la logique de persistance.
+ * Utilise le middleware persist() pour maintenir certaines données entre
+ * les sessions (filtres uniquement pour éviter la surcharge).
+ * 
+ * @architecture
+ * - **create()** : Factory Zustand pour créer le store
+ * - **persist()** : Middleware pour la persistance sélective
+ * - **set/get** : Fonctions Zustand pour la gestion d'état immutable
+ * 
+ * @persistence
+ * - Storage: sessionStorage (données temporaires par onglet)
+ * - Partielle: seuls les filtres sont persistés
+ * - Avantage: préserve les préférences utilisateur sans surcharger
+ */
 export const useFilesStore = create<FilesState>()(
   persist(
     (set, get) => ({
       ...initialState,
 
       /**
-       * Récupérer la liste des fichiers avec filtres et pagination
+       * Action principale pour charger la liste des fichiers
+       * 
+       * Cette fonction constitue le cœur du système de chargement des fichiers.
+       * Elle gère les filtres, la pagination, les requêtes API et la mise à jour
+       * de l'état global de manière atomique et optimiste.
+       * 
+       * @param {Partial<FileQuery>} query - Filtres optionnels à appliquer
+       * 
+       * @process
+       * 1. Fusion des filtres actuels avec les nouveaux
+       * 2. Construction des paramètres de requête URL
+       * 3. Appel API vers /api/files
+       * 4. Mise à jour de l'état avec les données et métadonnées
+       * 5. Gestion des erreurs avec messages utilisateur
+       * 
+       * @example
+       * ```tsx
+       * // Chargement simple
+       * await fetchFiles();
+       * 
+       * // Avec filtres
+       * await fetchFiles({ status: 'ready', search: 'rapport' });
+       * 
+       * // Changement de page
+       * await fetchFiles({ page: 2 });
+       * ```
        */
       fetchFiles: async (query?: Partial<FileQuery>) => {
+        /**
+         * Initialisation de l'état de chargement
+         * 
+         * Met isLoading à true pour déclencher les indicateurs visuels
+         * et efface les erreurs précédentes pour un état propre.
+         */
         set({ isLoading: true, error: null })
 
         try {
@@ -178,9 +345,39 @@ export const useFilesStore = create<FilesState>()(
       },
 
       /**
-       * Supprimer un fichier
+       * Action de suppression optimiste d'un fichier
+       * 
+       * Implémente une suppression avec mise à jour immédiate de l'UI
+       * (optimistic update) suivie de l'appel API. En cas d'échec,
+       * l'état est restauré à sa valeur précédente.
+       * 
+       * @param {string} id - ID du fichier à supprimer
+       * @returns {Promise<boolean>} True si la suppression a réussi
+       * 
+       * @pattern Optimistic Update
+       * - Mise à jour immédiate de l'UI
+       * - Appel API en arrière-plan
+       * - Rollback en cas d'échec
+       * - UX plus fluide et responsive
+       * 
+       * @example
+       * ```tsx
+       * const handleDelete = async (fileId: string) => {
+       *   const success = await deleteFile(fileId);
+       *   if (success) {
+       *     toast.success('Fichier supprimé !');
+       *   }
+       *   // L'erreur est déjà gérée dans le store
+       * };
+       * ```
        */
       deleteFile: async (id: string) => {
+        /**
+         * Initialisation de l'état de suppression
+         * 
+         * Active le flag isDeleting pour les indicateurs UI
+         * et nettoie les erreurs précédentes.
+         */
         set({ isDeleting: true, error: null })
 
         try {
@@ -267,15 +464,62 @@ export const useFilesStore = create<FilesState>()(
       },
 
       /**
-       * Mettre à jour les filtres
+       * Action de mise à jour des filtres avec re-fetch automatique
+       * 
+       * Cette action met à jour les filtres de recherche et relance
+       * automatiquement le chargement des fichiers avec les nouveaux
+       * critères. Elle garantit la cohérence entre les filtres et les données.
+       * 
+       * @param {Partial<FilesState['filters']>} newFilters - Nouveaux filtres à appliquer
+       * 
+       * @behavior
+       * - Merge les nouveaux filtres avec les existants
+       * - Relance automatiquement fetchFiles()
+       * - Remet la pagination à la page 1
+       * - Préserve les autres paramètres (tri, etc.)
+       * 
+       * @example
+       * ```tsx
+       * // Filtrer par statut
+       * setFilters({ status: 'ready' });
+       * 
+       * // Recherche textuelle
+       * setFilters({ search: 'document.pdf' });
+       * 
+       * // Réinitialiser un filtre
+       * setFilters({ status: 'all' });
+       * 
+       * // Plusieurs filtres simultanés
+       * setFilters({
+       *   status: 'ready',
+       *   sortBy: 'originalFilename',
+       *   sortOrder: 'asc'
+       * });
+       * ```
        */
       setFilters: (newFilters: Partial<FilesState['filters']>) => {
+        /**
+         * Fusion des filtres avec préservation des valeurs existantes
+         * 
+         * Combine les filtres actuels avec les nouveaux pour permettre
+         * des mises à jour partielles sans perdre les autres critères.
+         */
         const currentFilters = get().filters
         const updatedFilters = { ...currentFilters, ...newFilters }
         
+        /**
+         * Mise à jour atomique des filtres
+         * 
+         * Met à jour l'état des filtres de manière immutable.
+         */
         set({ filters: updatedFilters })
         
-        // Relancer automatiquement la requête avec les nouveaux filtres
+        /**
+         * Re-fetch automatique avec nouveaux filtres
+         * 
+         * Relance immédiatement le chargement pour maintenir
+         * la cohérence entre les filtres affichés et les données.
+         */
         get().fetchFiles()
       },
 

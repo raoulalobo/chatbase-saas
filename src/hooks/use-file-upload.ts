@@ -4,67 +4,218 @@ import * as React from "react"
 import { SupportedFileTypesSchema, FileSizeValidationSchema } from "@/lib/schemas/file"
 
 /**
- * Hook personnalisé pour gérer l'upload de fichiers
- * - Validation des fichiers avant upload
- * - Progress tracking
- * - Gestion des erreurs
- * - Support drag & drop
+ * Hook React personnalisé pour la gestion complète d'upload de fichiers
+ * 
+ * Ce hook encapsule toute la logique d'upload de fichiers vers les agents,
+ * incluant la validation, le suivi de progression, la gestion d'erreurs,
+ * et l'intégration avec l'API backend. Il utilise XMLHttpRequest pour
+ * un contrôle précis du processus d'upload et du suivi de progression.
+ * 
+ * @features
+ * - **Validation pré-upload** : Types MIME, taille, format
+ * - **Suivi de progression** : Pourcentage temps réel via XMLHttpRequest
+ * - **Gestion d'erreurs** : Messages localisés et codes d'erreur
+ * - **Support timeout** : 5 minutes par défaut pour gros fichiers
+ * - **Callbacks configurables** : onSuccess, onError, onProgress
+ * - **Validation Zod** : Intégration avec les schémas de validation
+ * 
+ * @performance
+ * - Utilisation de XMLHttpRequest pour le contrôle de progression
+ * - Validation côté client pour éviter les uploads inutiles  
+ * - Gestion mémoire optimisée avec cleanup automatique
+ * - Timeout configurable pour éviter les uploads infinis
+ * 
+ * @compatibility
+ * - Compatible avec tous les navigateurs modernes
+ * - Support des gros fichiers (jusqu'à 25MB par défaut)
+ * - Intégration native avec l'API FormData
+ * 
+ * @example
+ * ```tsx
+ * const { upload, isUploading, progress, error } = useFileUpload({
+ *   agentId: 'agent_123',
+ *   onSuccess: (response) => console.log('Upload réussi:', response),
+ *   onError: (error) => console.error('Erreur upload:', error),
+ *   onProgress: (progress) => console.log(`${progress.percentage}%`)
+ * });
+ * 
+ * // Upload d'un fichier
+ * const handleFileSelect = async (file: File) => {
+ *   const success = await upload(file);
+ *   if (success) {
+ *     // Fichier uploadé avec succès
+ *   }
+ * };
+ * ```
  */
 
+/**
+ * Interface décrivant l'objet de progression d'upload
+ * 
+ * Contient toutes les informations nécessaires pour afficher
+ * une barre de progression et des statistiques d'upload.
+ */
 interface UploadProgress {
+  /** Nombre d'octets déjà envoyés */
   loaded: number
+  /** Taille totale du fichier en octets */
   total: number
+  /** Pourcentage de progression (0-100) */
   percentage: number
 }
 
+/**
+ * Interface décrivant une erreur d'upload
+ * 
+ * Structure standardisée pour toutes les erreurs liées à l'upload
+ * de fichiers, compatible avec les systèmes de notification.
+ */
 interface UploadError {
+  /** Message d'erreur lisible par l'utilisateur */
   message: string
+  /** Code d'erreur technique optionnel pour le débogage */
   code?: string
 }
 
+/**
+ * Options de configuration du hook useFileUpload
+ * 
+ * Définit le comportement et les callbacks du processus d'upload.
+ * Permet une customisation fine selon les besoins de chaque composant.
+ */
 interface UseFileUploadOptions {
+  /** ID de l'agent vers lequel uploader le fichier */
   agentId: string
+  /** Callback exécuté en cas de succès d'upload */
   onSuccess?: (response: any) => void
+  /** Callback exécuté en cas d'erreur d'upload */
   onError?: (error: UploadError) => void
+  /** Callback exécuté à chaque mise à jour de progression */
   onProgress?: (progress: UploadProgress) => void
-  maxSize?: number // en bytes, défaut 25MB
+  /** Taille maximale autorisée en octets (défaut: 25MB) */
+  maxSize?: number
+  /** Liste des types MIME autorisés (optionnel, utilise les défauts sinon) */
   allowedTypes?: string[]
 }
 
+/**
+ * Interface de retour du hook useFileUpload
+ * 
+ * Définit l'API publique du hook avec toutes les fonctions
+ * et états disponibles pour les composants consommateurs.
+ */
 interface UseFileUploadReturn {
+  /** Fonction principale pour uploader un fichier */
   upload: (file: File) => Promise<boolean>
+  /** Indique si un upload est en cours */
   isUploading: boolean
+  /** Objet de progression actuel (null si pas d'upload) */
   progress: UploadProgress | null
+  /** Erreur actuelle (null si pas d'erreur) */
   error: UploadError | null
+  /** Fonction pour effacer l'erreur actuelle */
   clearError: () => void
+  /** Fonction pour valider un fichier sans l'uploader */
   validateFile: (file: File) => { valid: boolean; error?: string }
 }
 
+/**
+ * Hook principal pour la gestion d'upload de fichiers
+ * 
+ * Implémente la logique complète d'upload avec validation, progression
+ * et gestion d'erreurs. Utilise XMLHttpRequest pour un contrôle fin
+ * du processus d'upload et du suivi de progression en temps réel.
+ * 
+ * @param {UseFileUploadOptions} options Configuration du hook
+ * @returns {UseFileUploadReturn} API du hook avec fonctions et états
+ * 
+ * @example
+ * ```tsx
+ * const fileUpload = useFileUpload({
+ *   agentId: 'agent_123',
+ *   maxSize: 10 * 1024 * 1024, // 10MB
+ *   onSuccess: (response) => {
+ *     toast.success('Fichier uploadé avec succès !');
+ *     refreshFilesList();
+ *   },
+ *   onError: (error) => {
+ *     toast.error(`Erreur: ${error.message}`);
+ *   },
+ *   onProgress: (progress) => {
+ *     setUploadProgress(progress.percentage);
+ *   }
+ * });
+ * ```
+ */
 export function useFileUpload(options: UseFileUploadOptions): UseFileUploadReturn {
+  /**
+   * Destructuration des options avec valeurs par défaut
+   * 
+   * Extrait la configuration passée au hook et définit
+   * les valeurs par défaut pour les options non spécifiées.
+   */
   const {
     agentId,
     onSuccess,
     onError,
     onProgress,
-    maxSize = 25 * 1024 * 1024, // 25MB
-    allowedTypes
+    maxSize = 25 * 1024 * 1024, // 25MB - Limite par défaut de l'API
+    allowedTypes // Optionnel - utilise SupportedFileTypesSchema par défaut
   } = options
 
-  const [isUploading, setIsUploading] = React.useState(false)
-  const [progress, setProgress] = React.useState<UploadProgress | null>(null)
-  const [error, setError] = React.useState<UploadError | null>(null)
+  /**
+   * États React pour la gestion du processus d'upload
+   * 
+   * Ces états sont exposés aux composants consommateurs pour
+   * permettre l'affichage d'indicateurs visuels et la gestion UX.
+   */
+  const [isUploading, setIsUploading] = React.useState(false)  // Flag d'upload en cours
+  const [progress, setProgress] = React.useState<UploadProgress | null>(null)  // Progression actuelle
+  const [error, setError] = React.useState<UploadError | null>(null)  // Erreur actuelle
 
-  // Validation d'un fichier
+  /**
+   * Fonction de validation complète d'un fichier
+   * 
+   * Effectue toutes les validations nécessaires avant l'upload :
+   * - Validation Zod avec FileSizeValidationSchema
+   * - Vérification des types MIME autorisés
+   * - Validation de la taille personnalisée
+   * - Gestion des erreurs avec messages localisés
+   * 
+   * @param {File} file - Fichier à valider
+   * @returns {Object} Résultat de validation avec flag et message d'erreur optionnel
+   * 
+   * @example
+   * ```tsx
+   * const { valid, error } = validateFile(selectedFile);
+   * if (!valid) {
+   *   toast.error(error);
+   *   return;
+   * }
+   * ```
+   */
   const validateFile = React.useCallback((file: File) => {
     try {
-      // Validation de la taille
+      /**
+       * Étape 1: Validation Zod avec schéma de taille de fichier
+       * 
+       * Utilise FileSizeValidationSchema pour valider :
+       * - Taille du fichier (limite globale)
+       * - Nom du fichier (présence et format)
+       * - Type MIME (format basique)
+       */
       FileSizeValidationSchema.parse({
         size: file.size,
         filename: file.name,
         type: file.type
       })
 
-      // Validation du type si spécifié
+      /**
+       * Étape 2: Validation des types autorisés personnalisés
+       * 
+       * Si une liste spécifique de types est fournie dans les options,
+       * vérifie que le fichier correspond à l'un d'eux.
+       */
       if (allowedTypes && !allowedTypes.includes(file.type)) {
         return {
           valid: false,
@@ -72,10 +223,20 @@ export function useFileUpload(options: UseFileUploadOptions): UseFileUploadRetur
         }
       }
 
-      // Validation avec le schéma Zod
+      /**
+       * Étape 3: Validation avec le schéma des types supportés
+       * 
+       * Utilise SupportedFileTypesSchema pour valider que le type MIME
+       * est dans la liste des types supportés par l'application.
+       */
       SupportedFileTypesSchema.parse(file.type)
 
-      // Validation de la taille personnalisée
+      /**
+       * Étape 4: Validation de la taille personnalisée
+       * 
+       * Vérifie la limite de taille spécifiée dans les options du hook.
+       * Cette validation complète celle du schéma Zod pour plus de flexibilité.
+       */
       if (file.size > maxSize) {
         const maxSizeMB = maxSize / (1024 * 1024)
         return {
@@ -87,8 +248,15 @@ export function useFileUpload(options: UseFileUploadOptions): UseFileUploadRetur
       return { valid: true }
 
     } catch (err: any) {
+      /**
+       * Gestion des erreurs de validation
+       * 
+       * Transforme les erreurs Zod et autres exceptions en messages
+       * d'erreur utilisateur-friendly avec fallback générique.
+       */
       let errorMessage = "Fichier invalide"
       
+      // Extraction du premier message d'erreur Zod si disponible
       if (err.errors && err.errors.length > 0) {
         errorMessage = err.errors[0].message
       } else if (err.message) {

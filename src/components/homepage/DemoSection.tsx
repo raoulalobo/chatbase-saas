@@ -94,12 +94,22 @@ export function DemoSection() {
   const isInView = useInView(ref, { once: true, margin: "-100px" })
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    // Scroller uniquement dans le conteneur du chat, pas la page entière
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: "smooth",
+        block: "nearest", // Utiliser "nearest" au lieu de "start" pour éviter de scroller la page
+        inline: "nearest"
+      })
+    }
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, typingMessage, typingUserMessage])
+    // Ne scroller que si la démo est en cours pour éviter les effets de bord
+    if (isPlaying && (messages.length > 0 || typingMessage || typingUserMessage)) {
+      scrollToBottom()
+    }
+  }, [messages, typingMessage, typingUserMessage, isPlaying])
 
   const startDemo = () => {
     setIsPlaying(true)

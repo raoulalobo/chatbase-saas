@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useAgentsStore, useAgentsList } from "@/stores/agentsStore"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/hooks/useToast"
 import { formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -30,6 +32,8 @@ import { fr } from "date-fns/locale"
 export default function AgentsPage() {
   const { agents, pagination, isLoading, filters } = useAgentsList()
   const { deleteAgent, setFilters, isDeleting } = useAgentsStore()
+  const { openConfirmDialog, ConfirmDialog } = useConfirmDialog()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = React.useState(filters.search || '')
 
   // Gérer la recherche avec debounce
@@ -54,9 +58,37 @@ export default function AgentsPage() {
   }, [agents])
 
   const handleDeleteAgent = async (id: string, name: string) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer l'agent "${name}" ? Cette action est irréversible.`)) {
-      await deleteAgent(id)
-    }
+    openConfirmDialog({
+      title: "Supprimer l'agent",
+      description: `Êtes-vous sûr de vouloir supprimer l'agent "${name}" ? Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      cancelLabel: "Annuler", 
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          const result = await deleteAgent(id)
+          if (result.success) {
+            toast({
+              title: "Agent supprimé",
+              description: `L'agent "${name}" a été supprimé avec succès.`,
+              variant: "success",
+            })
+          } else {
+            toast({
+              title: "Erreur",
+              description: result.error || "Une erreur est survenue lors de la suppression.",
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          toast({
+            title: "Erreur",
+            description: "Une erreur inattendue est survenue.",
+            variant: "destructive",
+          })
+        }
+      }
+    })
   }
 
   return (
@@ -361,6 +393,7 @@ export default function AgentsPage() {
           </>
         )}
       </div>
+      {ConfirmDialog}
     </AppLayout>
   )
 }

@@ -15,6 +15,17 @@ import Link from "next/link"
  */
 
 export function HeroSection() {
+  // Fonction pour générer des valeurs pseudo-aléatoires déterministes
+  // Basée sur l'index pour éviter les problèmes d'hydratation SSR/Client
+  const getPseudoRandomValue = (seed: number, min: number, max: number, precision: number = 2): number => {
+    // Algorithme de génération pseudo-aléatoire simple basé sur le seed
+    const pseudo = Math.sin(seed * 12.9898) * 43758.5453;
+    const normalized = pseudo - Math.floor(pseudo);
+    const value = min + normalized * (max - min);
+    // Arrondir à la précision spécifiée pour éviter les différences de rendu
+    return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
+  };
+
   // Variants d'animation pour les éléments
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -88,17 +99,17 @@ export function HeroSection() {
             key={i}
             className="absolute w-2 h-2 bg-emerald-400/40 rounded-full"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${getPseudoRandomValue(i + 1, 0, 100, 2)}%`,
+              top: `${getPseudoRandomValue(i + 10, 0, 100, 2)}%`,
             }}
             animate={{
               y: [0, -100, 0],
               opacity: [0, 1, 0],
             }}
             transition={{
-              duration: 8 + Math.random() * 4,
+              duration: 8 + getPseudoRandomValue(i + 20, 0, 4, 2),
               repeat: Infinity,
-              delay: Math.random() * 5,
+              delay: getPseudoRandomValue(i + 30, 0, 5, 2),
               ease: "easeInOut",
             }}
           />

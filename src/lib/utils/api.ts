@@ -28,6 +28,12 @@ export interface ApiError {
 export function formatZodError(error: ZodError): Record<string, string[]> {
   const formattedErrors: Record<string, string[]> = {}
   
+  // Sécurisation : vérifier que errors existe et est un array
+  if (!error.errors || !Array.isArray(error.errors)) {
+    console.warn('formatZodError: error.errors is not an array:', error)
+    return { general: ['Erreur de validation'] }
+  }
+  
   error.errors.forEach((err) => {
     const path = err.path.join('.')
     if (!formattedErrors[path]) {
