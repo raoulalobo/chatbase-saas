@@ -31,12 +31,14 @@ interface AntiHallucinationConfigProps {
   value: AntiHallucinationTemplate
   onChange: (template: AntiHallucinationTemplate) => void
   className?: string
+  showAdvancedFeatures?: boolean
 }
 
 export function AntiHallucinationConfig({
   value,
   onChange,
-  className = ""
+  className = "",
+  showAdvancedFeatures = false
 }: AntiHallucinationConfigProps) {
   // Une seule source de vérité : value.companyName
   const companyName = value.companyName || ""
@@ -147,7 +149,14 @@ export function AntiHallucinationConfig({
             <Label className="text-sm font-medium">
               Niveau de protection anti-hallucination
             </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {!showAdvancedFeatures && (
+              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border-l-4 border-amber-400">
+                📋 Configuration en lecture seule. Contactez votre administrateur pour modifier le niveau.
+              </p>
+            )}
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 ${
+              !showAdvancedFeatures ? 'opacity-75 pointer-events-none' : ''
+            }`}>
               {(Object.keys(DEFAULT_TEMPLATES) as HallucinationIntensity[]).map((intensity) => {
                 const isSelected = value.intensity === intensity
                 const template = DEFAULT_TEMPLATES[intensity]
@@ -155,12 +164,14 @@ export function AntiHallucinationConfig({
                 return (
                   <div
                     key={intensity}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    className={`border rounded-lg p-4 transition-all ${
+                      showAdvancedFeatures ? 'cursor-pointer' : 'cursor-not-allowed'
+                    } ${
                       isSelected 
                         ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-                    onClick={() => handleIntensityChange(intensity)}
+                    onClick={showAdvancedFeatures ? () => handleIntensityChange(intensity) : undefined}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -260,12 +271,24 @@ export function AntiHallucinationConfig({
           )}
           
           {/* Configuration avancée */}
-          <div className="space-y-3">
+          <div className={`space-y-3 relative ${!showAdvancedFeatures ? 'opacity-50' : ''}`}>
             <Label className="text-sm font-medium">
               Options avancées
             </Label>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            {!showAdvancedFeatures && (
+              <div className="absolute inset-0 bg-gray-50/80 rounded-lg flex items-center justify-center z-10 pointer-events-none">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                  <p className="text-xs text-gray-600 flex items-center gap-2">
+                    🔒 Configuration réservée aux administrateurs
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 text-sm ${
+              !showAdvancedFeatures ? 'pointer-events-none' : ''
+            }`}>
               <div className="flex items-center justify-between">
                 <span>Limites contextuelles strictes</span>
                 <div className={`px-2 py-1 rounded text-xs ${
@@ -313,17 +336,29 @@ export function AntiHallucinationConfig({
           </div>
           
           {/* Note informative */}
-          <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">💡 Recommandations basées sur nos tests</p>
-              <ul className="text-xs space-y-1 list-disc list-inside">
-                <li><strong>Configuration "Strict"</strong> : 100% de fidélité contextuelle testée</li>
-                <li><strong>Service client</strong> : Évite les erreurs sur produits concurrents</li>
-                <li><strong>Coût optimisé</strong> : Prompts longs mais haute efficacité</li>
-              </ul>
+          {showAdvancedFeatures ? (
+            <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">💡 Recommandations basées sur nos tests</p>
+                <ul className="text-xs space-y-1 list-disc list-inside">
+                  <li><strong>Configuration "Strict"</strong> : 100% de fidélité contextuelle testée</li>
+                  <li><strong>Service client</strong> : Évite les erreurs sur produits concurrents</li>
+                  <li><strong>Coût optimisé</strong> : Prompts longs mais haute efficacité</li>
+                </ul>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <Info className="w-5 h-5 text-gray-400 mt-0.5" />
+              <div className="text-sm text-gray-600">
+                <p className="font-medium mb-1">🔒 Informations techniques masquées</p>
+                <p className="text-xs">
+                  Les détails sur les performances et recommandations internes sont réservés aux administrateurs.
+                </p>
+              </div>
+            </div>
+          )}
           
         </CardContent>
       </Card>

@@ -21,8 +21,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Récupérer l'agent avec ses fichiers
-    const agent = await agentQueries.getWithFiles(agentId)
+    // Récupérer l'agent
+    const agent = await agentQueries.get(agentId)
     if (!agent) {
       return NextResponse.json(
         { error: "Agent introuvable" },
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       maxTokens: agent.maxTokens,
       topP: agent.topP,
       model: agent.model,
-      fileIds: agent.anthropicFileIds || [], // IDs des fichiers associés
+      restrictToPromptSystem: agent.restrictToPromptSystem
     }
 
     // Créer ou récupérer la conversation
@@ -78,9 +78,8 @@ export async function POST(request: Request) {
     const chatResponse = {
       response: anthropicResponse.response,
       conversationId: currentConversationId,
-      messageId: botMessage.id,
       tokensUsed: anthropicResponse.tokensUsed,
-      sourcesUsed: agent.files?.filter(file => file.status === "ready") || [],
+      filesUsed: 0 // Plus de fichiers utilisés
     }
 
     return NextResponse.json(chatResponse)

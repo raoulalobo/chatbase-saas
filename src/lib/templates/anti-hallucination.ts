@@ -16,7 +16,7 @@ export type HallucinationIntensity = 'disabled' | 'light' | 'strict' | 'ultra_st
 // Schéma de validation pour le template anti-hallucination
 export const AntiHallucinationTemplateSchema = z.object({
   enabled: z.boolean().default(true),
-  intensity: z.enum(['disabled', 'light', 'strict', 'ultra_strict']).default('strict'),
+  intensity: z.enum(['disabled', 'light', 'strict', 'ultra_strict']).default('ultra_strict'),
   domain: z.string().min(1, "Le domaine d'expertise est obligatoire").default("services client"),
   companyName: z.string().default(""), // Optionnel pour personnalisation
   contextLimitations: z.object({
@@ -143,6 +143,11 @@ export function generateAntiHallucinationPrompt(
 CONTEXTE PROFESSIONNEL:
 Tu es un assistant spécialisé dans ${processMessage(template.domain)} ${companyName}.
 
+LIMITATION AUX SOURCES:
+- Privilégie les informations explicitement mentionnées dans ton prompt système
+- Si une information n'est pas claire dans ton contexte, signale-le
+- Base tes réponses prioritairement sur les instructions qui te sont données
+
 DIRECTIVES COMPORTEMENTALES:
 - Privilégier les informations ${companyName} quand disponibles
 - Signaler quand tu sors du contexte ${companyName}
@@ -152,6 +157,12 @@ DIRECTIVES COMPORTEMENTALES:
     instructions = `
 CONTEXTE STRICT:
 Tu es un assistant spécialisé EXCLUSIVEMENT dans ${processMessage(template.domain)} ${companyName}.
+
+LIMITATION STRICTE AUX SOURCES:
+- Tu ne peux utiliser QUE les informations explicitement mentionnées dans ton prompt système ci-dessous
+- Si une information n'est PAS dans ton contexte de base, tu ne peux pas y répondre
+- Interdiction d'utiliser tes connaissances générales même dans ton domaine d'expertise
+- Si incertain, utilise: "${processMessage(template.responsePatterns.uncertaintyMessage)}"
 
 LIMITATIONS CONTEXTUELLES OBLIGATOIRES:
 - Si une question ne concerne PAS ${companyName}, réponds: "${processMessage(template.responsePatterns.refusalMessage)}"
@@ -164,6 +175,12 @@ LIMITATIONS CONTEXTUELLES OBLIGATOIRES:
     instructions = `
 CONTEXTE ULTRA-STRICT - RESPECT OBLIGATOIRE:
 Tu es un assistant spécialisé UNIQUEMENT et EXCLUSIVEMENT dans ${processMessage(template.domain)} ${companyName}.
+
+LIMITATION ABSOLUE AUX SOURCES - RÈGLE FONDAMENTALE:
+- Tu ne peux utiliser EXCLUSIVEMENT que les informations contenues dans ton prompt système ci-dessous
+- INTERDICTION ABSOLUE d'utiliser tes connaissances externes, même dans ton domaine d'expertise
+- Si l'information n'est PAS explicitement mentionnée dans ${basePrompt ? 'ton contexte de base' : 'tes instructions'}, tu ne peux PAS y répondre
+- Réponse obligatoire si info manquante: "${processMessage(template.responsePatterns.uncertaintyMessage)}"
 
 RÈGLES ABSOLUES - AUCUNE EXCEPTION:
 - INTERDICTION FORMELLE de répondre à toute question ne concernant pas ${companyName}
@@ -178,10 +195,15 @@ SANCTIONS: Toute violation de ces règles constitue un échec critique.`
   // Assembler le prompt final
   return `${instructions}
 
-PROMPT UTILISATEUR PERSONNALISÉ:
+============================================================
+PROMPT UTILISATEUR PERSONNALISÉ (TES SEULES SOURCES D'INFORMATION):
 ${basePrompt}
+============================================================
 
-RAPPEL FINAL: Reste toujours professionnel et dans ton rôle d'expert ${companyName}.`
+RAPPEL FINAL: 
+- Utilise UNIQUEMENT les informations contenues dans le "PROMPT UTILISATEUR PERSONNALISÉ" ci-dessus
+- Si l'information n'y est pas, tu ne peux pas répondre
+- Reste toujours professionnel et dans ton rôle d'expert ${companyName}`
 }
 
 /**

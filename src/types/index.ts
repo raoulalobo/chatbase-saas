@@ -1,5 +1,5 @@
 import { InferSelectModel, InferInsertModel } from "drizzle-orm"
-import { users, agents, conversations, messages, agentFiles } from "@/lib/db/schema"
+import { users, agents, conversations, messages } from "@/lib/db/schema"
 
 /**
  * Types générés automatiquement à partir du schéma Drizzle
@@ -11,27 +11,16 @@ export type User = InferSelectModel<typeof users>
 export type Agent = InferSelectModel<typeof agents>
 export type Conversation = InferSelectModel<typeof conversations>
 export type Message = InferSelectModel<typeof messages>
-export type AgentFile = InferSelectModel<typeof agentFiles>
 
 // Types pour les insertions (écriture vers la DB)
 export type NewUser = InferInsertModel<typeof users>
 export type NewAgent = InferInsertModel<typeof agents>
 export type NewConversation = InferInsertModel<typeof conversations>
 export type NewMessage = InferInsertModel<typeof messages>
-export type NewAgentFile = InferInsertModel<typeof agentFiles>
 
 // Types étendus avec relations
 export type AgentWithUser = Agent & {
   user: User
-}
-
-export type AgentWithFiles = Agent & {
-  files: AgentFile[]
-}
-
-export type AgentFull = Agent & {
-  user: User
-  files: AgentFile[]
 }
 
 export type ConversationWithAgent = Conversation & {
@@ -54,8 +43,7 @@ export type AnthropicConfig = {
   maxTokens: string
   topP: string
   model: string
-  fileIds: string[]
-  restrictToDocuments: boolean // Force l'agent à rester strictement dans le contexte de son prompt système
+  restrictToPromptSystem: boolean // Force l'agent à rester strictement dans le contexte de son prompt système
 }
 
 export type ChatRequest = {
@@ -67,7 +55,6 @@ export type ChatRequest = {
 export type ChatResponse = {
   response: string
   conversationId: string
-  messageId: string
   tokensUsed?: number
-  sourcesUsed?: AgentFile[]
+  filesUsed?: number
 }

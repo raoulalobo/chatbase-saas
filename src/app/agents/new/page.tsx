@@ -42,7 +42,7 @@ export default function NewAgentPage() {
     defaultValues: {
       name: "",
       description: "",
-      systemPrompt: "Tu es un assistant IA spécialisé en service client. Réponds de manière professionnelle, empathique et précise aux questions des clients.",
+      systemPrompt: "Tu es un assistant IA spécialisé EXCLUSIVEMENT dans le service client de cette entreprise. Ton expertise se limite à :\n- Répondre aux questions sur nos produits et services\n- Aider avec les problèmes de commandes et facturation\n- Orienter vers les bons contacts internes\n\nTu dois REFUSER de répondre aux questions qui ne concernent pas cette entreprise (questions générales, autres entreprises, concurrents, sujets hors-contexte).",
       temperature: "0.7",
       maxTokens: "4000",
       topP: "0.9",
@@ -51,7 +51,7 @@ export default function NewAgentPage() {
       restrictToPromptSystem: true,
       antiHallucinationTemplate: AntiHallucinationTemplateSchema.parse({
         enabled: true,
-        intensity: 'strict',
+        intensity: 'ultra_strict',
         domain: "services client",
         companyName: "",
         contextLimitations: {

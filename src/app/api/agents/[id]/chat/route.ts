@@ -89,8 +89,7 @@ export async function POST(
       temperature: agent.temperature,
       maxTokens: agent.maxTokens,
       topP: agent.topP,
-      fileIds: agent.files.map(f => f.anthropicFileId).filter(Boolean), // Filtrer les IDs vides
-      restrictToDocuments: agent.restrictToDocuments // Force l'agent à rester strictement dans le contexte de son prompt système
+      restrictToPromptSystem: agent.restrictToPromptSystem // Force l'agent à rester strictement dans le contexte de son prompt système
     }
 
     // Appeler l'API Anthropic pour générer une réponse
@@ -111,7 +110,7 @@ export async function POST(
       response: botResponse,
       conversationId: finalConversationId,
       tokensUsed: tokensUsed || 0,
-      filesUsed: agent.files.length
+      filesUsed: 0 // Plus d'utilisation de fichiers suite à l'abandon des documents
     }
 
     return createSuccessResponse(responseData)
