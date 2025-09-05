@@ -59,11 +59,11 @@ const navigationItems = [
     url: "/conversations",
     icon: MessageSquare,
   },
-  {
-    title: "Fichiers",
-    url: "/files", 
-    icon: FileText,
-  },
+// {
+//   title: "Fichiers",
+//   url: "/files", 
+//   icon: FileText,
+// },
   {
     title: "Paramètres",
     url: "/settings",
@@ -164,9 +164,11 @@ export function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuItem className="text-slate-700">
-                  <User2 className="w-4 h-4 mr-2" />
-                  Profil
+                <DropdownMenuItem className="text-slate-700" asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <User2 className="w-4 h-4 mr-2" />
+                    Profil
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-slate-700">
                   <Settings className="w-4 h-4 mr-2" />

@@ -26,10 +26,10 @@ const steps = [
   {
     number: "01",
     icon: Upload,
-    title: "Uploadez vos Documents",
-    description: "Glissez-déposez vos FAQ, guides produits, documentation technique ou tout contenu qui représente votre expertise métier.",
+    title: "Copiez-Collez ou Redigez",
+    description: "Entrez vos FAQ, guides produits, documentation technique ou tout contenu qui représente votre expertise métier.",
     details: [
-      "PDF, Word, Excel, texte brut",
+      "Editeur de texte simple",
       "Traitement automatique du contenu",
       "Analyse sémantique avancée",
     ],

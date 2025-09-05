@@ -262,7 +262,7 @@ export default function DashboardPage() {
                 </Link>
               </Button>
               
-              <Button 
+              {/* <Button 
                 asChild
                 variant="outline" 
                 className="w-full justify-start h-auto p-4 text-slate-700 border-gray-300 hover:bg-gray-50"
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </Link>
-              </Button>
+              </Button> */}
 
               <Button 
                 asChild

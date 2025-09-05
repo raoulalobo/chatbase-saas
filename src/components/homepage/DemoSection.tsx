@@ -7,9 +7,6 @@ import {
   Send, 
   Bot, 
   User, 
-  Zap,
-  Clock,
-  TrendingUp,
   Sparkles,
   Play
 } from "lucide-react"
@@ -60,26 +57,6 @@ const demoConversation = [
   },
 ]
 
-const metrics = [
-  {
-    icon: Clock,
-    label: "Temps de réponse",
-    value: "0.8s",
-    color: "emerald",
-  },
-  {
-    icon: TrendingUp,
-    label: "Satisfaction client",
-    value: "96%",
-    color: "blue",
-  },
-  {
-    icon: Zap,
-    label: "Résolution instantanée",
-    value: "84%",
-    color: "purple",
-  },
-]
 
 export function DemoSection() {
   const [messages, setMessages] = useState<typeof demoConversation>([])
@@ -241,12 +218,12 @@ export function DemoSection() {
           </Button>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 max-w-7xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           {/* Chat Widget */}
           <motion.div
-            className="lg:col-span-2"
-            initial={{ opacity: 0, x: -50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
+            className=""
+            initial={{ opacity: 0, y: 30 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <div className="relative">
@@ -372,76 +349,6 @@ export function DemoSection() {
                 </div>
               </div>
             </div>
-          </motion.div>
-
-          {/* Métriques */}
-          <motion.div
-            className="space-y-6"
-            initial={{ opacity: 0, x: 50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 50 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            <div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                Performance en Temps Réel
-              </h3>
-              <p className="text-slate-600">
-                Métriques actuelles de l'agent IA
-              </p>
-            </div>
-
-            {metrics.map((metric, index) => {
-              const Icon = metric.icon
-              
-              return (
-                <motion.div
-                  key={metric.label}
-                  className="p-6 rounded-2xl backdrop-blur-xl bg-white/70 border border-white/20 shadow-xl"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                  transition={{ delay: 0.6 + index * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-gradient-to-r ${
-                      metric.color === "emerald"
-                        ? "from-emerald-400 to-emerald-600"
-                        : metric.color === "blue"
-                        ? "from-blue-400 to-blue-600"
-                        : "from-purple-400 to-purple-600"
-                    } shadow-lg`}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                  
-                  <div className="text-3xl font-bold text-slate-900 mb-1">
-                    {metric.value}
-                  </div>
-                  
-                  <div className="text-slate-600 font-medium">
-                    {metric.label}
-                  </div>
-                </motion.div>
-              )
-            })}
-
-            {/* Statistiques supplémentaires */}
-            <motion.div
-              className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
-              transition={{ delay: 1 }}
-            >
-              <div className="text-center">
-                <MessageSquare className="w-8 h-8 text-emerald-600 mx-auto mb-3" />
-                <div className="text-2xl font-bold text-emerald-800 mb-1">
-                  +150%
-                </div>
-                <div className="text-emerald-700 font-medium text-sm">
-                  D'amélioration de satisfaction client
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>

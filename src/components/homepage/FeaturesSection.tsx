@@ -223,15 +223,12 @@ export function FeaturesSection() {
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <p className="text-lg text-slate-600 mb-6">
-            Prêt à transformer votre service client ?
-          </p>
           <motion.button
             className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Découvrir toutes les fonctionnalités
+            Prêt à transformer votre service client ?
           </motion.button>
         </motion.div>
       </div>

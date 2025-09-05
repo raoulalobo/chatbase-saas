@@ -42,7 +42,7 @@ const trustIndicators = [
 ]
 
 const guarantees = [
-  "14 jours d'essai gratuit",
+  "07 jours d'essai gratuit",
   "Pas de frais cachés",
   "Annulation à tout moment",
   "Support dédié français"
@@ -166,9 +166,9 @@ export function CTASection() {
             <Button
               variant="outline"
               size="lg"
-              className="border-2 border-emerald-400/50 text-emerald-100 hover:bg-emerald-500/20 px-10 py-5 text-xl font-semibold rounded-2xl backdrop-blur-sm transition-all duration-300"
+              className="border-2 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20 px-10 py-5 text-xl font-semibold rounded-2xl backdrop-blur-sm transition-all duration-300"
             >
-              Essai gratuit 14 jours
+              Essai gratuit 07 jours
             </Button>
           </motion.div>
 

@@ -59,7 +59,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     id: "demo",
-    label: "Démonstration",
+    label: "Démo",
     icon: MessageSquare,
   },
   {
