@@ -1,0 +1,143 @@
+{
+  "results": [
+    {
+      "method": "without-cache",
+      "question": "Quels sont les services proposés par Oris Finance ?",
+      "response": "D'après le document, Oris Finance propose plusieurs services principaux :\n\n1. Financement Personnel\n- Crédits de 50 000 à 10 000 000 FCFA\n- Financement pour :\n  * Équipements électroménagers\n  * Achat de véhicules\n  * Événements familiaux\n  * Travaux de rénovation\n  * Frais médicaux\n  * Financement d'études\n\n2. Financement Professionnel\n- Crédits pour :\n  * PME et micro-entreprises\n  * Équipements professionnels\n  * Fonds de roulement\n  * Financement de stocks\n  * Crédits immobiliers professionnels\n\n3. Épargne et Placements\n- Comptes d'épargne rémunérés\n- Plans d'épargne à terme\n- Épargne retraite\n- Épargne éducation\n- Placements obligataires\n\n4. Services Connexes\n- Transferts d'argent nationaux et internationaux\n- Services de change\n- Assurance-crédit\n- Formation financière\n- Conseils en gestion de patrimoine\n\nVoulez-vous que je vous détaille l'un de ces services ?",
+      "tokensInput": 14562,
+      "tokensOutput": 314,
+      "totalTokens": 14876,
+      "responseTime": 7768,
+      "promptLength": 49038
+    },
+    {
+      "method": "without-cache",
+      "question": "Quel est le numéro de téléphone d'Oris Finance ?",
+      "response": "Selon les informations fournies, Oris Finance dispose de deux numéros de téléphone :\n\n233 430 880 et 656 27 36 36\n\nCes numéros sont disponibles au siège social situé à Douala-AKWA, Boulevard de la Liberté.",
+      "tokensInput": 14567,
+      "tokensOutput": 73,
+      "totalTokens": 14640,
+      "responseTime": 3861,
+      "promptLength": 49038
+    },
+    {
+      "method": "without-cache",
+      "question": "Quelles sont les conditions d'éligibilité pour un crédit ?",
+      "response": "Voici les conditions d'éligibilité pour un crédit chez Oris Finance :\n\nCONDITIONS GÉNÉRALES :\n- Être âgé de 18 ans minimum\n- Résider au Cameroun ou dans la zone CEMAC\n- Justifier de revenus réguliers et suffisants\n- Ne pas avoir d'incidents de paiement récents\n- Fournir l'ensemble des pièces justificatives requises\n\nDOCUMENTS REQUIS POUR LES PARTICULIERS :\n- Carte nationale d'identité en cours de validité\n- Justificatifs de revenus des 3 derniers mois \n- Relevés bancaires des 3 derniers mois\n- Justificatif de domicile récent\n- Références personnelles et professionnelles\n- Photos d'identité récentes\n\nDOCUMENTS SUPPLÉMENTAIRES POUR LES PROFESSIONNELS :\n- Registre de commerce \n- Attestations fiscales à jour\n- Comptes de résultats des 2 dernières années\n- Business plan détaillé pour les nouveaux projets\n- Relevés bancaires professionnels\n- Contrats commerciaux en cours\n\nVoulez-vous que je vous détaille l'un de ces points ?",
+      "tokensInput": 14565,
+      "tokensOutput": 302,
+      "totalTokens": 14867,
+      "responseTime": 6510,
+      "promptLength": 49038
+    },
+    {
+      "method": "without-cache",
+      "question": "Quels sont les horaires d'ouverture ?",
+      "response": "Selon nos informations officielles, les horaires d'ouverture d'Oris Finance sont les suivants :\n\n- Lundi à Vendredi : 8h00 - 17h00\n- Samedi : 8h00 - 12h00\n- Fermé le dimanche et les jours fériés\n\nCes horaires s'appliquent à nos différentes agences, notamment :\n- Douala Akwa : Boulevard de la Liberté\n- Douala Bonanjo : Rue Joffre\n- Yaoundé Centre : Avenue Kennedy\n- Bafoussam : Quartier Commerce",
+      "tokensInput": 14561,
+      "tokensOutput": 153,
+      "totalTokens": 14714,
+      "responseTime": 4816,
+      "promptLength": 49038
+    },
+    {
+      "method": "without-cache",
+      "question": "Comment contacter le service client ?",
+      "response": "",
+      "tokensInput": 0,
+      "tokensOutput": 0,
+      "totalTokens": 0,
+      "responseTime": 6210,
+      "promptLength": 49038,
+      "error": "500 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Internal server error\"},\"request_id\":null}"
+    },
+    {
+      "method": "cache-write",
+      "question": "Quels sont les services proposés par Oris Finance ?",
+      "response": "D'après le document, Oris Finance propose principalement 4 types de services :\n\n1. FINANCEMENT PERSONNEL\n- Crédits de 50 000 à 10 000 000 FCFA\n- Financement pour :\n  * Équipements électroménagers\n  * Achat de véhicules\n  * Événements familiaux\n  * Travaux de rénovation\n  * Frais médicaux\n  * Financement d'études\n\n2. FINANCEMENT PROFESSIONNEL\n- Crédits pour :\n  * PME et micro-entreprises\n  * Équipements professionnels\n  * Fonds de roulement\n  * Financement de stocks\n  * Crédits immobiliers professionnels\n\n3. ÉPARGNE ET PLACEMENTS\n- Comptes d'épargne rémunérés\n- Plans d'épargne à terme\n- Épargne retraite\n- Épargne éducation\n- Placements obligataires\n\n4. SERVICES CONNEXES\n- Transferts d'argent\n- Services de change\n- Assurance-crédit\n- Formation financière\n- Conseils en gestion de patrimoine",
+      "tokensInput": 21,
+      "tokensOutput": 297,
+      "totalTokens": 318,
+      "responseTime": 6828,
+      "promptLength": 49038,
+      "cacheCreationInputTokens": 14541,
+      "cacheReadInputTokens": 0
+    },
+    {
+      "method": "cache-read",
+      "question": "Quel est le numéro de téléphone d'Oris Finance ?",
+      "response": "Selon les informations fournies, Oris Finance dispose de deux numéros de téléphone :\n\n233 430 880 et 656 27 36 36\n\nCes numéros sont disponibles pour contacter le siège social de l'entreprise, situé à Douala-AKWA, Boulevard de la Liberté.",
+      "tokensInput": 26,
+      "tokensOutput": 82,
+      "totalTokens": 108,
+      "responseTime": 2550,
+      "promptLength": 49038,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 14541
+    },
+    {
+      "method": "cache-read",
+      "question": "Quelles sont les conditions d'éligibilité pour un crédit ?",
+      "response": "Pour être éligible à un crédit chez Oris Finance, vous devez répondre aux conditions générales suivantes :\n\nConditions générales :\n- Être âgé de 18 ans minimum\n- Résider au Cameroun ou dans la zone CEMAC\n- Justifier de revenus réguliers et suffisants\n- Ne pas présenter d'incidents de paiement récents\n- Fournir l'ensemble des pièces justificatives requises\n\nDocuments requis pour les particuliers :\n- Carte nationale d'identité en cours de validité\n- Justificatifs de revenus des 3 derniers mois \n- Relevés bancaires des 3 derniers mois\n- Justificatif de domicile récent\n- Références personnelles et professionnelles\n- Photos d'identité récentes\n\nPour les professionnels, des documents supplémentaires seront demandés comme le registre de commerce, les attestations fiscales, les comptes de résultats, etc.\n\nChaque dossier sera étudier individuellement par nos experts pour déterminer les conditions précises de financement.\n\nSouhaitez-vous plus de détails sur nos conditions de crédit ?",
+      "tokensInput": 24,
+      "tokensOutput": 292,
+      "totalTokens": 316,
+      "responseTime": 6930,
+      "promptLength": 49038,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 14541
+    },
+    {
+      "method": "cache-read",
+      "question": "Quels sont les horaires d'ouverture ?",
+      "response": "Selon nos informations officielles, les horaires d'ouverture d'Oris Finance sont les suivants :\n\n- Lundi à Vendredi : 8h00 - 17h00\n- Samedi : 8h00 - 12h00\n- Fermé le dimanche et les jours fériés\n\nCes horaires s'appliquent à nos différentes agences, notamment :\n- Douala Akwa (Boulevard de la Liberté)\n- Douala Bonanjo (Rue Joffre)\n- Yaoundé Centre (Avenue Kennedy)\n- Bafoussam (Quartier Commerce)",
+      "tokensInput": 20,
+      "tokensOutput": 157,
+      "totalTokens": 177,
+      "responseTime": 3453,
+      "promptLength": 49038,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 14541
+    },
+    {
+      "method": "cache-read",
+      "question": "Comment contacter le service client ?",
+      "response": "Voici les différents moyens de contacter le service client Oris Finance :\n\n📞 Téléphones :\n- 233 430 880\n- 656 27 36 36\n\n📧 Email : \ncontact@oris-finance.com\n\n📍 Agences physiques :\n- Douala-Akwa : Boulevard de la Liberté\n- Douala Bonanjo : Rue Joffre  \n- Yaoundé Centre : Avenue Kennedy\n- Bafoussam : Quartier Commerce\n\n⏰ Horaires d'ouverture :\n- Lundi à Vendredi : 8h00 - 17h00\n- Samedi : 8h00 - 12h00\n- Fermé dimanche et jours fériés\n\nNuméros d'urgence :\n- Opposition carte : disponible 24h/7j\n- Urgence crédit : 656 27 36 36\n- Email urgence : urgence@oris-finance.com\n\nPermanence week-end : \nUn conseiller est disponible les samedis de 8h à 12h.\n\nQue puis-je faire pour vous aujourd'hui ?",
+      "tokensInput": 14,
+      "tokensOutput": 290,
+      "totalTokens": 304,
+      "responseTime": 5705,
+      "promptLength": 49038,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 14541
+    }
+  ],
+  "analysis": {
+    "withoutCache": {
+      "totalCalls": 4,
+      "totalTokens": 59097,
+      "totalCost": 0.01561625,
+      "avgResponseTime": 5738.75,
+      "avgTokensPerCall": 14774.25
+    },
+    "withCache": {
+      "totalCalls": 5,
+      "totalTokens": 1223,
+      "totalCost": -0.010754337499999999,
+      "avgResponseTime": 5093.2,
+      "avgTokensPerCall": 244.6,
+      "cacheWriteCalls": 1,
+      "cacheReadCalls": 4,
+      "totalCacheCreationTokens": 14541,
+      "totalCacheReadTokens": 58164
+    },
+    "savings": {
+      "tokensSaved": 57874,
+      "costSaved": 0.0263705875,
+      "timeSaved": 645.5500000000002,
+      "percentageCostSaved": 168.86632514207957,
+      "percentageTokensSaved": 97.93052100783459,
+      "roiAfterCalls": 4
+    }
+  }
+}

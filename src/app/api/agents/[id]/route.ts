@@ -1,252 +1,282 @@
-import { NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { agents } from "@/lib/db/schema"
-import { eq, and, ne } from "drizzle-orm"
-import { 
-  UpdateAgentSchema, 
-  AgentParamsSchema,
-  type AgentResponse
-} from "@/lib/schemas/agent"
-import { 
-  createSuccessResponse, 
-  ApiErrorHandler 
-} from "@/lib/utils/api"
+import { eq } from "drizzle-orm"
+import { UpdateAgentSchema } from "@/lib/schemas/agent"
 
 /**
- * API Route pour les opérations sur un agent spécifique
- * GET /api/agents/[id] - Récupérer un agent
+ * API Route pour la gestion d'un agent spécifique
+ * GET /api/agents/[id] - Récupérer les détails d'un agent
  * PUT /api/agents/[id] - Mettre à jour un agent
  * DELETE /api/agents/[id] - Supprimer un agent
  */
 
-// Configuration pour augmenter la limite de taille du body
-export const runtime = 'nodejs'
-export const maxDuration = 60
-
-// GET /api/agents/[id] - Récupérer un agent spécifique
+/**
+ * Récupérer les détails d'un agent par ID
+ * GET /api/agents/[id]
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Vérification de l'authentification
+    // 1. Vérification authentification
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return ApiErrorHandler.unauthorized()
+      return NextResponse.json(
+        { error: "Authentification requise" },
+        { status: 401 }
+      )
     }
 
-    const resolvedParams = await params
-    
-    // Validation de l'ID
-    const paramsResult = AgentParamsSchema.safeParse({ id: resolvedParams.id })
-    if (!paramsResult.success) {
-      return ApiErrorHandler.handleError(paramsResult.error)
-    }
+    const { id: agentId } = await params
 
-    const { id } = paramsResult.data
-
-    // Récupération de l'agent
+    // 2. Récupération de l'agent avec vérification de propriété
     const agent = await db
       .select()
       .from(agents)
-      .where(
-        and(
-          eq(agents.id, id),
-          eq(agents.userId, session.user.id)
-        )
-      )
+      .where(eq(agents.id, agentId))
       .limit(1)
 
-    if (agent.length === 0) {
-      return ApiErrorHandler.notFound("Agent")
+    if (!agent.length) {
+      return NextResponse.json(
+        { error: "Agent introuvable" },
+        { status: 404 }
+      )
     }
 
-    // Format de la réponse (le template anti-hallucination est déjà un objet JSONB)
     const agentData = agent[0]
-    const responseData: AgentResponse = {
+
+    // 3. Vérification que l'utilisateur est propriétaire de l'agent
+    if (agentData.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Accès non autorisé à cet agent" },
+        { status: 403 }
+      )
+    }
+
+    // 4. Formatage de la réponse avec parsing des JSON fields
+    const response = {
       ...agentData,
       createdAt: agentData.createdAt.toISOString(),
       updatedAt: agentData.updatedAt.toISOString(),
-      // TODO: Ajouter les compteurs réels
-      _count: {
-        conversations: 0,
-        files: 0,
-      }
+      // Parser les champs JSON si ils existent
+      antiHallucinationTemplate: agentData.antiHallucinationTemplate
+        ? typeof agentData.antiHallucinationTemplate === 'string'
+          ? JSON.parse(agentData.antiHallucinationTemplate)
+          : agentData.antiHallucinationTemplate
+        : null,
+      allowedDomains: agentData.allowedDomains
+        ? typeof agentData.allowedDomains === 'string'
+          ? JSON.parse(agentData.allowedDomains)
+          : agentData.allowedDomains
+        : null,
+      widgetConfig: agentData.widgetConfig
+        ? typeof agentData.widgetConfig === 'string'
+          ? JSON.parse(agentData.widgetConfig)
+          : agentData.widgetConfig
+        : null
     }
 
-    return createSuccessResponse(responseData)
+    return NextResponse.json(response, { status: 200 })
 
-  } catch (error) {
-    return ApiErrorHandler.handleError(error)
+  } catch (error: any) {
+    console.error("Erreur récupération agent:", error)
+
+    return NextResponse.json(
+      { error: "Erreur interne lors de la récupération de l'agent" },
+      { status: 500 }
+    )
   }
 }
 
-// PUT /api/agents/[id] - Mettre à jour un agent
+/**
+ * Mettre à jour un agent
+ * PUT /api/agents/[id]
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Vérification de l'authentification
+    // 1. Vérification authentification
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return ApiErrorHandler.unauthorized()
+      return NextResponse.json(
+        { error: "Authentification requise" },
+        { status: 401 }
+      )
     }
 
-    const resolvedParams = await params
+    const { id: agentId } = await params
 
-    // Validation de l'ID
-    const paramsResult = AgentParamsSchema.safeParse({ id: resolvedParams.id })
-    if (!paramsResult.success) {
-      return ApiErrorHandler.handleError(paramsResult.error)
-    }
-
-    const { id } = paramsResult.data
-
-    // Validation des données à mettre à jour
+    // 2. Validation des données de la requête
     const body = await request.json()
     const validationResult = UpdateAgentSchema.safeParse(body)
+
     if (!validationResult.success) {
-      return ApiErrorHandler.handleError(validationResult.error)
+      const errors = validationResult.error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message
+      }))
+
+      return NextResponse.json(
+        { 
+          error: "Données invalides",
+          details: errors
+        },
+        { status: 400 }
+      )
     }
 
     const updateData = validationResult.data
 
-    // Vérifier que l'agent existe et appartient à l'utilisateur
+    // 3. Vérification existence et propriété de l'agent
     const existingAgent = await db
       .select()
       .from(agents)
-      .where(
-        and(
-          eq(agents.id, id),
-          eq(agents.userId, session.user.id)
-        )
-      )
+      .where(eq(agents.id, agentId))
       .limit(1)
 
-    if (existingAgent.length === 0) {
-      return ApiErrorHandler.notFound("Agent")
+    if (!existingAgent.length) {
+      return NextResponse.json(
+        { error: "Agent introuvable" },
+        { status: 404 }
+      )
     }
 
-    // Si le nom change, vérifier l'unicité
-    if (updateData.name && updateData.name !== existingAgent[0].name) {
-      const duplicateAgent = await db
+    if (existingAgent[0].userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Accès non autorisé à cet agent" },
+        { status: 403 }
+      )
+    }
+
+    // 4. Vérifier l'unicité du nom (si changé)
+    if (updateData.name !== existingAgent[0].name) {
+      const nameConflict = await db
         .select()
         .from(agents)
-        .where(
-          and(
-            eq(agents.userId, session.user.id),
-            eq(agents.name, updateData.name),
-            // Exclure l'agent actuel
-            ne(agents.id, id)
-          )
-        )
+        .where(eq(agents.name, updateData.name))
         .limit(1)
 
-      if (duplicateAgent.length > 0) {
-        return ApiErrorHandler.conflict("Un agent avec ce nom existe déjà")
+      if (nameConflict.length > 0 && nameConflict[0].id !== agentId) {
+        return NextResponse.json(
+          { error: "Un agent avec ce nom existe déjà" },
+          { status: 409 }
+        )
       }
     }
 
-    // Préparer les données de mise à jour (JSONB gère automatiquement les objets)
-    const processedUpdateData = { ...updateData }
-    
-    // Mise à jour de l'agent
+    // 5. Mise à jour de l'agent
     const updatedAgent = await db
       .update(agents)
       .set({
-        ...processedUpdateData,
-        updatedAt: new Date(),
+        name: updateData.name,
+        description: updateData.description,
+        systemPrompt: updateData.systemPrompt,
+        temperature: updateData.temperature,
+        maxTokens: updateData.maxTokens,
+        topP: updateData.topP,
+        model: updateData.model,
+        isActive: updateData.isActive,
+        restrictToPromptSystem: updateData.restrictToPromptSystem,
+        antiHallucinationTemplate: updateData.antiHallucinationTemplate
+          ? JSON.stringify(updateData.antiHallucinationTemplate)
+          : null,
+        updatedAt: new Date()
       })
-      .where(
-        and(
-          eq(agents.id, id),
-          eq(agents.userId, session.user.id)
-        )
-      )
+      .where(eq(agents.id, agentId))
       .returning()
 
-    if (updatedAgent.length === 0) {
-      return ApiErrorHandler.notFound("Agent")
+    // 6. Format de la réponse
+    const response = {
+      ...updatedAgent[0],
+      createdAt: updatedAgent[0].createdAt.toISOString(),
+      updatedAt: updatedAgent[0].updatedAt.toISOString(),
+      antiHallucinationTemplate: updatedAgent[0].antiHallucinationTemplate
+        ? JSON.parse(updatedAgent[0].antiHallucinationTemplate as string)
+        : null
     }
 
-    // Format de la réponse (JSONB retourne déjà l'objet correctement)
-    const updatedAgentData = updatedAgent[0]
-    const responseData: AgentResponse = {
-      ...updatedAgentData,
-      createdAt: updatedAgentData.createdAt.toISOString(),
-      updatedAt: updatedAgentData.updatedAt.toISOString(),
-    }
+    return NextResponse.json({
+      success: true,
+      message: "Agent mis à jour avec succès",
+      agent: response
+    })
 
-    return createSuccessResponse(
-      responseData,
-      "Agent mis à jour avec succès"
+  } catch (error: any) {
+    console.error("Erreur mise à jour agent:", error)
+
+    return NextResponse.json(
+      { error: "Erreur interne lors de la mise à jour" },
+      { status: 500 }
     )
-
-  } catch (error) {
-    return ApiErrorHandler.handleError(error)
   }
 }
 
-// DELETE /api/agents/[id] - Supprimer un agent
+/**
+ * Supprimer un agent
+ * DELETE /api/agents/[id]
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Vérification de l'authentification
+    // 1. Vérification authentification
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return ApiErrorHandler.unauthorized()
+      return NextResponse.json(
+        { error: "Authentification requise" },
+        { status: 401 }
+      )
     }
 
-    const resolvedParams = await params
+    const { id: agentId } = await params
 
-    // Validation de l'ID
-    const paramsResult = AgentParamsSchema.safeParse({ id: resolvedParams.id })
-    if (!paramsResult.success) {
-      return ApiErrorHandler.handleError(paramsResult.error)
-    }
-
-    const { id } = paramsResult.data
-
-    // Vérifier que l'agent existe et appartient à l'utilisateur
-    const existingAgent = await db
+    // 2. Vérification existence et propriété de l'agent
+    const agent = await db
       .select()
       .from(agents)
-      .where(
-        and(
-          eq(agents.id, id),
-          eq(agents.userId, session.user.id)
-        )
-      )
+      .where(eq(agents.id, agentId))
       .limit(1)
 
-    if (existingAgent.length === 0) {
-      return ApiErrorHandler.notFound("Agent")
+    if (!agent.length) {
+      return NextResponse.json(
+        { error: "Agent introuvable" },
+        { status: 404 }
+      )
     }
 
-    // TODO: Vérifier si l'agent a des conversations actives
-    // et peut-être empêcher la suppression ou proposer une désactivation
+    if (agent[0].userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Accès non autorisé à cet agent" },
+        { status: 403 }
+      )
+    }
 
-    // Suppression de l'agent (cascade défini dans le schéma)
+    // 3. Suppression de l'agent (cascade automatique sur conversations/messages)
     await db
       .delete(agents)
-      .where(
-        and(
-          eq(agents.id, id),
-          eq(agents.userId, session.user.id)
-        )
-      )
+      .where(eq(agents.id, agentId))
 
-    return createSuccessResponse(
-      { id },
-      "Agent supprimé avec succès"
+    // 4. Log pour audit
+    console.log(`Agent ${agentId} supprimé par utilisateur ${session.user.id}`)
+
+    return NextResponse.json({
+      success: true,
+      message: "Agent supprimé avec succès"
+    })
+
+  } catch (error: any) {
+    console.error("Erreur suppression agent:", error)
+
+    return NextResponse.json(
+      { error: "Erreur interne lors de la suppression" },
+      { status: 500 }
     )
-
-  } catch (error) {
-    return ApiErrorHandler.handleError(error)
   }
 }

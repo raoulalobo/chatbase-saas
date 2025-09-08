@@ -103,21 +103,91 @@ async function apiRequest<T>(
       ...options,
     })
 
-    const result: ApiResponse<T> = await response.json()
-
-    if (!result.success) {
+    // Gestion spécifique des codes d'erreur HTTP
+    if (!response.ok) {
+      // Vérifier si c'est une redirection vers la page de login
+      if (response.status === 302 || response.status === 307 || response.status === 401) {
+        const text = await response.text()
+        if (text.includes('/login')) {
+          return {
+            data: null,
+            error: 'Session expirée. Veuillez vous reconnecter.',
+          }
+        }
+      }
+      
+      // Autres codes d'erreur HTTP
+      const errorMessages: Record<number, string> = {
+        400: 'Requête invalide',
+        401: 'Non autorisé - veuillez vous connecter',
+        403: 'Accès interdit',
+        404: 'Ressource introuvable',
+        500: 'Erreur interne du serveur',
+        302: 'Session expirée - redirection nécessaire',
+        307: 'Session expirée - redirection nécessaire',
+      }
+      
       return {
         data: null,
-        error: result.error || 'Erreur inconnue',
+        error: errorMessages[response.status] || `Erreur HTTP ${response.status}`,
       }
     }
 
-    return {
-      data: result.data || null,
-      error: null,
+    // Vérifier si la réponse est du JSON valide
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text()
+      if (text.includes('/login')) {
+        return {
+          data: null,
+          error: 'Session expirée. Veuillez vous reconnecter.',
+        }
+      }
+      return {
+        data: null,
+        error: 'Réponse non-JSON reçue du serveur',
+      }
+    }
+
+    const result = await response.json()
+
+    // Gestion des deux formats de réponse API
+    if (result.hasOwnProperty('success')) {
+      // Format structuré: { success: true/false, data: ..., error: ... }
+      const apiResponse = result as ApiResponse<T>
+      
+      if (!apiResponse.success) {
+        // Debug: loguer la réponse complète pour diagnostiquer
+        console.warn('API Response non-success:', { result: apiResponse, url: fullUrl })
+        
+        return {
+          data: null,
+          error: apiResponse.error || apiResponse.message || 'Réponse API invalide - pas de message d\'erreur fourni',
+        }
+      }
+
+      return {
+        data: apiResponse.data || null,
+        error: null,
+      }
+    } else {
+      // Format direct: les données directement (comme /api/agents/[id])
+      return {
+        data: result as T,
+        error: null,
+      }
     }
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('API Error détaillée:', error)
+    
+    // Erreurs de parsing JSON
+    if (error instanceof SyntaxError && error.message.includes('JSON')) {
+      return {
+        data: null,
+        error: 'Réponse invalide du serveur (erreur de format)',
+      }
+    }
+    
     return {
       data: null,
       error: error instanceof Error ? error.message : 'Erreur de réseau',
@@ -275,7 +345,7 @@ export const useConversationsStore = create<ConversationsState>()(
           return { success: true, response: data }
         }
 
-        return { success: false, error: 'Erreur inconnue' }
+        return { success: false, error: 'Erreur lors de l\'envoi du message - aucune réponse reçue' }
       },
 
       // Sélectionner une conversation

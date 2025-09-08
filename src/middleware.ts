@@ -43,7 +43,7 @@ export default withAuth(
 
         // Vérifier si la page est publique
         const isPublicPage = publicPages.some(page => 
-          pathname === page || pathname.startsWith('/api/auth/')
+          pathname === page || pathname.startsWith('/api/auth/') || pathname.startsWith('/api/public/')
         )
 
         if (isPublicPage) {
@@ -63,9 +63,11 @@ export const config = {
     /*
      * Correspondre à tous les chemins de requête sauf ceux commençant par :
      * - api/auth (API routes NextAuth)
+     * - api/public (API publique widget)
      * - _next/static (fichiers statiques)
      * - _next/image (optimisation d'images)
      * - favicon.ico (favicon)
+     * - chatbase-widget.js (widget JavaScript public)
      * - / (page d'accueil publique)
      * Et inclure spécifiquement :
      * - /dashboard/* (tableau de bord)
@@ -74,7 +76,7 @@ export const config = {
      * - /login (pour redirection si connecté)
      * - /register (pour redirection si connecté)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|api/public|_next/static|_next/image|favicon.ico|chatbase-widget.js).*)',
     '/dashboard/:path*',
     '/agents/:path*',
     '/profile/:path*',

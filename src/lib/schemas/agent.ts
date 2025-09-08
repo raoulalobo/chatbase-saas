@@ -24,7 +24,7 @@ export const AgentBaseSchema = z.object({
   systemPrompt: z
     .string()
     .min(10, "Le prompt système doit contenir au moins 10 caractères")
-    .max(50000, "Le prompt système ne peut pas dépasser 50000 caractères"),
+    .max(150000, "Le prompt système ne peut pas dépasser 150000 caractères"),
   
   // Paramètres Anthropic avec validation stricte
   temperature: z

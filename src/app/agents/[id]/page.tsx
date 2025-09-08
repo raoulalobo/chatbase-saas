@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, Bot, Save, AlertCircle, Loader2 } from "lucide-react"
+import { ArrowLeft, Bot, Save, AlertCircle, Loader2, Code2 } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -159,21 +159,31 @@ export default function EditAgentPage() {
     <AppLayout>
       <div className="space-y-6">
         {/* En-tête avec navigation */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" asChild>
-            <Link href="/agents">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour aux agents
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" asChild>
+              <Link href="/agents">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Retour aux agents
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                Modifier l'agent : {selectedAgent.name}
+              </h1>
+              <p className="text-slate-600 mt-2">
+                Ajustez la configuration et le comportement de votre assistant
+              </p>
+            </div>
+          </div>
+          
+          {/* Bouton d'accès à l'intégration widget */}
+          <Button variant="outline" asChild className="bg-primary/5 border-primary/20 hover:bg-primary/10">
+            <Link href={`/agents/${agentId}/embed`}>
+              <Code2 className="w-4 h-4 mr-2" />
+              Intégration Widget
             </Link>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Modifier l'agent : {selectedAgent.name}
-            </h1>
-            <p className="text-slate-600 mt-2">
-              Ajustez la configuration et le comportement de votre assistant
-            </p>
-          </div>
         </div>
 
         {/* Affichage des erreurs */}
@@ -286,13 +296,13 @@ export default function EditAgentPage() {
                       Soyez précis et détaillé.
                     </p>
                     <p className={`text-xs font-medium ${
-                      (form.watch("systemPrompt")?.length || 0) > 50000 
+                      (form.watch("systemPrompt")?.length || 0) > 150000 
                         ? "text-red-600" 
-                        : (form.watch("systemPrompt")?.length || 0) > 40000 
+                        : (form.watch("systemPrompt")?.length || 0) > 120000 
                           ? "text-amber-600" 
                           : "text-slate-600"
                     }`}>
-                      {form.watch("systemPrompt")?.length || 0} / 50000 caractères
+                      {form.watch("systemPrompt")?.length || 0} / 150000 caractères
                     </p>
                   </div>
                 </div>

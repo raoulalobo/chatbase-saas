@@ -35,6 +35,11 @@ export const agents = pgTable("agents", {
   restrictToPromptSystem: boolean("restrict_to_prompt_system").default(true).notNull(), // Active système anti-hallucination
   antiHallucinationTemplate: jsonb("anti_hallucination_template"), // Template JSON pour configuration anti-hallucination
   
+  // Intégration widget publique
+  publicApiKey: text("public_api_key").unique(), // Clé API pour intégration widget sans auth
+  allowedDomains: jsonb("allowed_domains"), // Liste des domaines autorisés (sécurité)
+  widgetConfig: jsonb("widget_config"), // Configuration du widget (couleurs, position, etc.)
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

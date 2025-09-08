@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server"
 import { nanoid } from "nanoid"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { agents } from "@/lib/db/schema"
-import { eq, and, desc, asc, ilike, count } from "drizzle-orm"
+import { agents, conversations } from "@/lib/db/schema"
+import { eq, and, desc, asc, ilike, count, sql } from "drizzle-orm"
 import { 
   CreateAgentSchema, 
   AgentQuerySchema,
@@ -76,11 +76,51 @@ export async function GET(request: NextRequest) {
       ? asc(agents[sortBy as keyof typeof agents])
       : desc(agents[sortBy as keyof typeof agents])
 
-    // Requête pour récupérer les agents
+    // Requête optimisée avec LEFT JOIN pour récupérer les agents avec compteur de conversations
     const agentsResult = await db
-      .select()
+      .select({
+        id: agents.id,
+        name: agents.name,
+        description: agents.description,
+        systemPrompt: agents.systemPrompt,
+        userId: agents.userId,
+        temperature: agents.temperature,
+        maxTokens: agents.maxTokens,
+        topP: agents.topP,
+        model: agents.model,
+        isActive: agents.isActive,
+        restrictToPromptSystem: agents.restrictToPromptSystem,
+        antiHallucinationTemplate: agents.antiHallucinationTemplate,
+        publicApiKey: agents.publicApiKey,
+        allowedDomains: agents.allowedDomains,
+        widgetConfig: agents.widgetConfig,
+        createdAt: agents.createdAt,
+        updatedAt: agents.updatedAt,
+        // COUNT avec LEFT JOIN pour compter les conversations réelles
+        conversationsCount: sql<number>`COALESCE(COUNT(${conversations.id}), 0)`.as('conversations_count')
+      })
       .from(agents)
+      .leftJoin(conversations, eq(agents.id, conversations.agentId))
       .where(and(...whereConditions))
+      .groupBy(
+        agents.id,
+        agents.name,
+        agents.description,
+        agents.systemPrompt,
+        agents.userId,
+        agents.temperature,
+        agents.maxTokens,
+        agents.topP,
+        agents.model,
+        agents.isActive,
+        agents.restrictToPromptSystem,
+        agents.antiHallucinationTemplate,
+        agents.publicApiKey,
+        agents.allowedDomains,
+        agents.widgetConfig,
+        agents.createdAt,
+        agents.updatedAt
+      )
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset)
@@ -94,16 +134,16 @@ export async function GET(request: NextRequest) {
     const total = totalResult[0]?.count || 0
     const pagination = calculatePagination(total, page, limit)
 
-    // Format des données de réponse
+    // Format des données de réponse avec les vraies statistiques
     const response: AgentsListResponse = {
       agents: agentsResult.map(agent => ({
         ...agent,
         createdAt: agent.createdAt.toISOString(),
         updatedAt: agent.updatedAt.toISOString(),
-        // TODO: Ajouter le compteur de conversations et fichiers
+        // Statistiques réelles calculées depuis la base de données
         _count: {
-          conversations: 0,
-          files: 0,
+          conversations: agent.conversationsCount || 0,
+          files: 0, // Architecture basée sur templates JSON, plus de fichiers
         }
       })),
       pagination
@@ -151,9 +191,15 @@ export async function POST(request: NextRequest) {
       return ApiErrorHandler.conflict("Un agent avec ce nom existe déjà")
     }
 
-    // Création de l'agent
+    // Création de l'agent avec génération automatique de la clé API publique
     const agentId = nanoid()
     const now = new Date()
+    
+    // Génération clé API publique pour intégration widget
+    // Format: cbp_[32 caractères aléatoires]_[timestamp]
+    const timestamp = Date.now().toString(36)
+    const randomPart = nanoid(32)
+    const publicApiKey = `cbp_${randomPart}_${timestamp}`
 
     const newAgent = await db
       .insert(agents)
@@ -170,6 +216,7 @@ export async function POST(request: NextRequest) {
         isActive: agentData.isActive,
         restrictToPromptSystem: agentData.restrictToPromptSystem,
         antiHallucinationTemplate: agentData.antiHallucinationTemplate,
+        publicApiKey: publicApiKey, // Clé API générée automatiquement
         createdAt: now,
         updatedAt: now,
       })

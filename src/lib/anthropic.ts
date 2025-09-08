@@ -6,12 +6,12 @@ import type { AnthropicConfig, ChatRequest, ChatResponse } from "@/types"
  * Gère l'upload de fichiers et les conversations avec contexte
  */
 
-// Initialisation du client Anthropic avec les headers requis pour l'API Files
+// Initialisation du client Anthropic avec les headers requis pour l'API Files et Cache
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
   apiVersion: "2023-06-01",
   defaultHeaders: {
-    "anthropic-beta": "files-api-2025-04-14",
+    "anthropic-beta": "prompt-caching-2024-07-31",
   },
 })
 
@@ -79,14 +79,61 @@ export class AnthropicService {
   }
 
   /**
+   * Seuil minimum de caractères pour activer le cache automatique
+   * Réduit à 500 pour optimiser la détection
+   */
+  private static readonly CACHE_THRESHOLD_CHARS = 500
+
+  /**
+   * Estime le nombre de tokens approximatif d'un texte
+   * Basé sur la règle ~3.5 caractères par token
+   */
+  private static estimateTokens(text: string): number {
+    return Math.ceil(text.length / 3.5)
+  }
+
+  /**
+   * Détermine si le cache doit être activé pour un prompt système
+   * @param systemPrompt - Le prompt système à analyser
+   * @returns Objet avec la décision et les métriques
+   */
+  static shouldEnableCache(systemPrompt: string): {
+    enable: boolean
+    reason: string
+    estimatedTokens: number
+    thresholdMet: boolean
+  } {
+    const estimatedTokens = this.estimateTokens(systemPrompt)
+    const thresholdMet = systemPrompt.length >= this.CACHE_THRESHOLD_CHARS
+    
+    const analysis = {
+      estimatedTokens,
+      thresholdMet,
+      enable: thresholdMet,
+      reason: thresholdMet 
+        ? `Prompt long (${systemPrompt.length} chars, ~${estimatedTokens} tokens) - Cache activé pour optimiser les coûts`
+        : `Prompt court (${systemPrompt.length} chars, ~${estimatedTokens} tokens) - Cache non rentable`
+    }
+    
+    return analysis
+  }
+
+  /**
    * Créer une conversation avec un agent utilisant ses fichiers sources
+   * Avec cache automatique pour les prompts longs (>1000 caractères)
    * @param config - Configuration de l'agent
    * @param question - Question de l'utilisateur
-   * @returns Réponse formatée
+   * @returns Réponse formatée avec métriques de cache
    */
   static async chat(config: AnthropicConfig, question: string): Promise<{
     response: string
     tokensUsed: number
+    cacheStats?: {
+      cacheEnabled: boolean
+      cacheCreationTokens?: number
+      cacheReadTokens?: number
+      estimatedSavings?: number
+    }
   }> {
     try {
       // Modifier le prompt système si restriction au contexte est activée
@@ -104,12 +151,41 @@ RÈGLES STRICTES À RESPECTER :
 - Concentre-toi uniquement sur les tâches liées à ton rôle système défini`
       }
 
+      // Analyser si le cache doit être activé automatiquement
+      const cacheAnalysis = this.shouldEnableCache(systemPrompt)
+      console.log(`💡 Analyse cache: ${cacheAnalysis.reason}`)
+      console.log(`🔧 Cache activé: ${cacheAnalysis.enable}`)
+      console.log(`📏 Longueur prompt: ${systemPrompt.length} caractères`)
+      
+      // Préparer le système de prompt avec ou sans cache
+      const systemConfig = cacheAnalysis.enable 
+        ? [
+            {
+              type: "text" as const,
+              text: systemPrompt,
+              cache_control: { type: "ephemeral" as const }
+            }
+          ]
+        : systemPrompt
+
+      console.log(`⚙️  Configuration système:`, {
+        cacheEnabled: cacheAnalysis.enable,
+        isArray: Array.isArray(systemConfig),
+        hasCache: Array.isArray(systemConfig) && systemConfig[0]?.cache_control ? true : false
+      })
+
+      console.log(`📤 Envoi requête Anthropic avec:`, {
+        model: config.model,
+        systemConfigType: Array.isArray(systemConfig) ? 'array_with_cache' : 'string',
+        systemLength: Array.isArray(systemConfig) ? systemConfig[0]?.text?.length : systemConfig.length
+      })
+
       const message = await anthropic.messages.create({
         model: config.model,
         max_tokens: parseInt(config.maxTokens),
         temperature: parseFloat(config.temperature),
         top_p: parseFloat(config.topP),
-        system: systemPrompt,
+        system: systemConfig,
         messages: [
           {
             role: "user",
@@ -118,14 +194,48 @@ RÈGLES STRICTES À RESPECTER :
         ],
       })
 
+      console.log(`📥 Réponse Anthropic reçue:`, {
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
+        cacheCreationTokens: message.usage.cache_creation_input_tokens || 0,
+        cacheReadTokens: message.usage.cache_read_input_tokens || 0
+      })
+
       const responseText = message.content
         .filter(block => block.type === "text")
         .map(block => block.text)
         .join("")
 
+      // Calculer les statistiques de cache si activé
+      let cacheStats = undefined
+      if (cacheAnalysis.enable) {
+        // Calcul des économies basé sur les tarifs Anthropic
+        const cacheCreationTokens = message.usage.cache_creation_input_tokens || 0
+        const cacheReadTokens = message.usage.cache_read_input_tokens || 0
+        
+        // Estimation des économies (90% d'économie sur les tokens lus depuis le cache)
+        const estimatedSavings = cacheReadTokens > 0 ? cacheReadTokens * 0.9 : 0
+        
+        cacheStats = {
+          cacheEnabled: true,
+          cacheCreationTokens,
+          cacheReadTokens,
+          estimatedSavings: Math.round(estimatedSavings)
+        }
+        
+        // Log pour monitoring des performances du cache
+        if (cacheCreationTokens > 0) {
+          console.log(`🔄 Cache créé: ${cacheCreationTokens} tokens cachés`)
+        }
+        if (cacheReadTokens > 0) {
+          console.log(`📖 Cache utilisé: ${cacheReadTokens} tokens lus depuis le cache (${Math.round(estimatedSavings)} tokens économisés)`)
+        }
+      }
+
       return {
         response: responseText,
         tokensUsed: message.usage.output_tokens + message.usage.input_tokens,
+        cacheStats
       }
     } catch (error: any) {
       console.error("Erreur lors de la conversation Anthropic:", error)

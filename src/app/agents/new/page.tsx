@@ -208,13 +208,13 @@ export default function NewAgentPage() {
                       Soyez précis et détaillé.
                     </p>
                     <p className={`text-xs font-medium ${
-                      (form.watch("systemPrompt")?.length || 0) > 50000 
+                      (form.watch("systemPrompt")?.length || 0) > 150000 
                         ? "text-red-600" 
-                        : (form.watch("systemPrompt")?.length || 0) > 40000 
+                        : (form.watch("systemPrompt")?.length || 0) > 120000 
                           ? "text-amber-600" 
                           : "text-slate-600"
                     }`}>
-                      {form.watch("systemPrompt")?.length || 0} / 50000 caractères
+                      {form.watch("systemPrompt")?.length || 0} / 150000 caractères
                     </p>
                   </div>
                 </div>
