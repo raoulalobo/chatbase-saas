@@ -47,6 +47,7 @@ export default function EditAgentPage() {
     error 
   } = useAgentsStore()
   const [companyName, setCompanyName] = React.useState("")
+  const [successMessage, setSuccessMessage] = React.useState("")
 
   // Configuration du formulaire avec React Hook Form et Zod
   const form = useForm<UpdateAgent>({
@@ -136,8 +137,13 @@ export default function EditAgentPage() {
     const result = await updateAgent(agentId, data)
     
     if (result.success) {
-      // Rediriger vers la liste des agents après mise à jour
-      router.push('/agents')
+      // Afficher un message de succès temporaire
+      setSuccessMessage("Agent mis à jour avec succès")
+      
+      // Masquer le message après 4 secondes
+      setTimeout(() => {
+        setSuccessMessage("")
+      }, 4000)
     }
   }
 
@@ -193,6 +199,20 @@ export default function EditAgentPage() {
             <div className="text-red-800">
               <p className="font-medium">Erreur</p>
               <p className="text-sm">{error.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Message de succès */}
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 8 8">
+                <path d="M3 7l-2-2 1-1 1 1 3-3 1 1z"/>
+              </svg>
+            </div>
+            <div className="text-green-800">
+              <p className="font-medium">{successMessage}</p>
             </div>
           </div>
         )}

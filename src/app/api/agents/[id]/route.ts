@@ -57,27 +57,15 @@ export async function GET(
       )
     }
 
-    // 4. Formatage de la réponse avec parsing des JSON fields
+    // 4. Formatage de la réponse (les champs JSONB sont auto-parsés par Drizzle)
     const response = {
       ...agentData,
       createdAt: agentData.createdAt.toISOString(),
       updatedAt: agentData.updatedAt.toISOString(),
-      // Parser les champs JSON si ils existent
-      antiHallucinationTemplate: agentData.antiHallucinationTemplate
-        ? typeof agentData.antiHallucinationTemplate === 'string'
-          ? JSON.parse(agentData.antiHallucinationTemplate)
-          : agentData.antiHallucinationTemplate
-        : null,
-      allowedDomains: agentData.allowedDomains
-        ? typeof agentData.allowedDomains === 'string'
-          ? JSON.parse(agentData.allowedDomains)
-          : agentData.allowedDomains
-        : null,
-      widgetConfig: agentData.widgetConfig
-        ? typeof agentData.widgetConfig === 'string'
-          ? JSON.parse(agentData.widgetConfig)
-          : agentData.widgetConfig
-        : null
+      // Les champs JSONB sont automatiquement parsés par Drizzle, pas besoin de JSON.parse()
+      antiHallucinationTemplate: agentData.antiHallucinationTemplate || null,
+      allowedDomains: agentData.allowedDomains || null,
+      widgetConfig: agentData.widgetConfig || null
     }
 
     return NextResponse.json(response, { status: 200 })
@@ -183,9 +171,7 @@ export async function PUT(
         model: updateData.model,
         isActive: updateData.isActive,
         restrictToPromptSystem: updateData.restrictToPromptSystem,
-        antiHallucinationTemplate: updateData.antiHallucinationTemplate
-          ? JSON.stringify(updateData.antiHallucinationTemplate)
-          : null,
+        antiHallucinationTemplate: updateData.antiHallucinationTemplate || null,
         updatedAt: new Date()
       })
       .where(eq(agents.id, agentId))
@@ -196,15 +182,14 @@ export async function PUT(
       ...updatedAgent[0],
       createdAt: updatedAgent[0].createdAt.toISOString(),
       updatedAt: updatedAgent[0].updatedAt.toISOString(),
-      antiHallucinationTemplate: updatedAgent[0].antiHallucinationTemplate
-        ? JSON.parse(updatedAgent[0].antiHallucinationTemplate as string)
-        : null
+      // Les champs JSONB sont automatiquement parsés par Drizzle, pas besoin de JSON.parse()
+      antiHallucinationTemplate: updatedAgent[0].antiHallucinationTemplate || null
     }
 
     return NextResponse.json({
       success: true,
       message: "Agent mis à jour avec succès",
-      agent: response
+      data: response
     })
 
   } catch (error: any) {
