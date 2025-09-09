@@ -6,8 +6,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Corriger le problème de workspace root sur Vercel
-  outputFileTracingRoot: __dirname,
+  // Configuration simple pour Vercel
+  swcMinify: false,
 };
 
 module.exports = nextConfig;
