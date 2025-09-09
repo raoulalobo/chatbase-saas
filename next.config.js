@@ -8,6 +8,8 @@ const nextConfig = {
     // Ignorer les erreurs TypeScript pendant le build pour permettre le déploiement  
     ignoreBuildErrors: true,
   },
+  // Configuration simple pour Vercel
+  swcMinify: false,
 };
 
 module.exports = nextConfig;
