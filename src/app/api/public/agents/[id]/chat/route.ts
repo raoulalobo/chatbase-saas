@@ -188,7 +188,7 @@ export async function POST(
       )
     }
     
-    // 7. Sauvegarder message utilisateur
+    // 7. Sauvegarder message utilisateur (version originale sans l'instruction de langue)
     await db.insert(messages).values({
       id: nanoid(),
       conversationId: currentConversationId,
@@ -230,10 +230,11 @@ export async function POST(
       restrictToPromptSystem: true, // Toujours activé pour les widgets publics
     }
     
-    // 10. Génération de la réponse via Anthropic
+    // 10. Détecter la langue et ajouter l'instruction appropriée
+    // 11. Génération de la réponse via Anthropic avec le message original
     const anthropicResponse = await AnthropicService.chat(anthropicConfig, message)
     
-    // 11. Sauvegarder réponse bot
+    // 12. Sauvegarder réponse bot
     await db.insert(messages).values({
       id: nanoid(),
       conversationId: currentConversationId,
@@ -241,7 +242,7 @@ export async function POST(
       isFromBot: true,
     })
     
-    // 12. Réponse finale avec headers CORS et rate limiting
+    // 13. Réponse finale avec headers CORS et rate limiting
     return NextResponse.json(
       {
         response: anthropicResponse.response,

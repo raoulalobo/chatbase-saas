@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       currentConversationId = newConversation.id
     }
 
-    // Appeler l'API Anthropic
+    // Appeler l'API Anthropic avec la question originale
     const anthropicResponse = await AnthropicService.chat(anthropicConfig, question)
 
     // Sauvegarder la question de l'utilisateur
